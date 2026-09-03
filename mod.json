@@ -1,0 +1,26 @@
+{
+  "name": {
+    "en": "Stack Experience Rebalance",
+    "ru": "Баланс опыта отрядов"
+  },
+  "description": {
+    "en": "readme.txt"
+  },
+  "author": "PerryR",
+  "homepage": "https://github.com/PerryR-1971/Stack-Experience-Rebalance",
+  "support": "https://discord.gg/hCTMfVq6w5",
+  "icon": "stackexp.ico",
+  "version": "0.9",
+  "category": "gameplay",
+  "compatibility": {
+    "requires": [
+      "WoG",
+      "Difficulty Mod"
+    ],
+    "load_after": [
+      "WoG",
+      "Difficulty Mod"
+    ],
+    "incompatible": []
+  }
+}

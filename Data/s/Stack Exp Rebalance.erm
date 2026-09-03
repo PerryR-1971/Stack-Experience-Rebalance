@@ -1,0 +1,1453 @@
+ZVSE2
+!#SN:W^Stack_Exp_Rebalance_Mod_Active^/1; [Set the mod active]
+
+****************************************************************************************************
+*STACK EXPERIENCE REBALANCE MOD
+*Author: modified by Perry, 2020
+*
+*EA:B ability reference
+*Format: EA<creature>:B<slot>/1/<effect code>/<modifier>/R0/R1/.../R10;
+*
+*Modifier codes
+*  Add (+)      = 43
+*  Set (=)      = 61
+*  Percent (%)  = 37
+*
+*Effect                                  Code
+*  Attack                                  65
+*  Block                                   66
+*  Reduce casting cost                     67
+*  Defense                                 68
+*  Death Stare                             69
+*  Fear                                    70
+*  Santa Gremlin guards                    71
+*  Health                                  72
+*  Cast advanced spell before attack       74
+*  Cast advanced spell after attack        75
+*  Deflect                                 76
+*  Maximum damage                          77
+*  Number of shots                         79
+*  Number of spell castings                80
+*  Retaliations                            82
+*  Speed                                   83
+*  Multiple summon                         85
+*  Magic resistance                        87
+*  Cast spell after melee attack           97
+*  Reduce target defense                   98
+*  Cast non-direct spell after attack      99
+*  Defending bonus                        100
+*  Death Blow                             101
+*  Flagged abilities                      102
+*  Golem-style damage resistance          103
+*  Hatred damage                          104
+*  No range penalty                       105
+*  Cast basic spell before attack         106
+*  Cast basic spell after attack          107
+*  Summon Clone                           108
+*  Minimum damage                         109
+*  No obstacle penalty                    111
+*  Cast spell before attack               112
+*  Regeneration                           114
+*  Enchant with spell                     115
+*  Single summon                          117
+*  Spell immunity                         119
+****************************************************************************************************
+
+****************************************************************************************************
+*ON GAME ENTER
+*1. Normalize all configuration values.
+*2. Apply the selected stat progression tables.
+*3. Remove old ability rows for enabled ability packages.
+*4. Assign the selected replacement abilities.
+
+!?FU(OnGameEnter);
+!!SN:W^Stack_Exp_Rebalance_On^/?y99; !!FU&y99=0:E; [Check if option was activated and Exit if not]
+!!FU(Stack_Exp_Normalize_Settings):P; [Ensure all four progression selectors use a valid preset]
+
+!!SN:W^Exp_WoG_Stats^/?y97;             [WoG stat progression option]
+!!SN:W^Exp_WoG_Abilities^/?y96;         [WoG faction ability option]
+!!SN:W^Exp_WoG_Neutrals^/?y94;          [WoG neutral ability option]
+
+*Explicit WoG neutral creature list
+!!SN:M(M_AUTO_ID)/0/(M_INT)/(M_TRIGGER_LOCAL)/?y93;
+!!FU(Array_Push):Py93/132/133/134/135/136/137/138/139/140/141/142/143/144;
+!!FU(Array_Push):Py93/159/160/161/162/163/164/165/166/167/168/169/170/171/172/173;
+!!FU(Array_Push):Py93/192/193/194/195/196;
+
+*Apply stat tables and clear old ability rows for enabled packages
+!!FU(Stack_Experience_Rebalance_Fkt):P0/131/y97/y96/0/0;      [WoG faction creatures]
+!!FU(Stack_Experience_Rebalance_Fkt):P132/196/y97/0/y93/y94;  [WoG neutrals and remaining WoG IDs]
+!!FU(Stack_Experience_Rebalance_Fkt):P150/158/0/y96/0/0;      [WoG level 8 faction creatures]
+
+*Assign the selected WoG ability packages
+!!FU(Stack_Exp_Apply_WoG_Faction_Abilities)&y96=1:P;
+!!FU(Stack_Exp_Apply_WoG_Neutral_Abilities)&y94=1:P;
+
+!!SN:W^Legacy_of_the_Silence_Active^/?y91;
+!!if&y91=1;                             [Prevent overlapping TUM creature IDs from being modified]
+    !!SN:W^Exp_TUM_Stats^/0;
+    !!SN:W^Exp_TUM_Abilities^/0;
+    !!SN:W^Exp_TUM_Neutrals^/0;
+!!en;
+
+!!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y90;
+!!if&y90=1/y91=0; 
+    [Explicit list from TUM's own neutral creature constants. Do not use MA:O because TUM assigns a town to some neutral upgrade chains dynamically.]
+    !!SN:M(M_AUTO_ID)/0/(M_INT)/(M_TRIGGER_LOCAL)/?y95;
+    !!FU(Array_Push):Py95/253/254/258/259/260/262/263/264/265/266/267/268;
+    !!FU(Array_Push):Py95/286/287/288/289/290/292/294/295/296/297/298/299;
+    !!FU(Array_Push):Py95/300/301/302/303/304/305/306/307/308/309/310/311;
+    !!FU(Array_Push):Py95/312/313/314/315/316/317/318/319/322/323/324/325;
+    !!FU(Array_Push):Py95/326/327/328/330/331/332/333/334/335/336/337/338;
+    !!FU(Array_Push):Py95/339/340/341/342/343/344/345/346/347;
+
+    !!SN:W^Exp_TUM_Stats^/?y97;   [Check option for TUM rebalanced stats]
+    !!SN:W^Exp_TUM_Abilities^/?y96;[Check option for TUM rebalanced abilities]
+    !!SN:W^Exp_TUM_Neutrals^/?y94;[Check option for TUM neutral abilities]
+    !!FU(GetMaxMonsterId):P?y1;     [Use the current creature limit instead of a fixed TUM ID]
+    !!FU(Stack_Experience_Rebalance_Fkt):P197/y1/y97/y96/y95/y94; [TUM creature IDs begin after the WoG Dracolich at ID 196]
+
+    !!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y98; 
+    !!FU(Set_Monster_Special_Text)&y98=1/y96=1:P; [add changed specialty text if option is enabled]
+!!en;
+
+!!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y99; !!FU|y99=0/y91=1:E; [Exit TUM ability package when unavailable or blocked]
+
+
+****************************************************************************************************
+*Castle*
+!!SN:W^Exp_TUM_Abilities^/?y1;[Check option for rebalanced abilities] 
+!!if&y1=1;
+    !!EA197:B6/1/76/29/0/3/6/9/12/15/18/21/24/27/30; [Royal Helbardiers have 30% chance to Deflect 30% of damage]
+
+    !!EA198:B6/1/98/61/0/2/4/6/8/10/12/14/16/20/25; [Marksmen Reduce 25% defense]
+    !!EA198:B7/1/111/43/0/0/0/0/0/0/0/0/0/0/1; [Marksmen no Obstacle Penalty]
+
+    !!EA199:B6/1/76/49/0/3/6/9/12/15/18/21/24/27/30; [Griffins 30% chance to Deflect 50% of damage]
+
+    !!EA291:B6/1/115/48/0/0/0/1/1/1/2/2/2/2/3; [Inquisitor Has Expert Prayer cast on them]
+
+    !!EA320:B6/1/119/112/0/0/0/0/0/1/1/1/1/1/1; [Zelots Iron Will]
+    !!EA320:B7/1/105/43/0/0/0/0/0/0/0/0/0/0/1; [Zelots No Distance Penalty]
+
+    !!EA201:B6/1/115/27/0/0/0/1/1/1/2/2/2/2/3; [Champions have Expert Shield Cast on them]
+    !!EA201:B7/1/102/102/0/0/0/0/0/0/0/0/0/0/1; [Champions are Fearless]
+
+    !!EA202:B6/1/80/43/0/0/0/0/0/0/0/0/0/0/1; [Angels Add One Cast at level 10 for S.Angels]
+
+    !!EA269:B6/1/115/48/0/0/0/1/1/1/2/2/2/2/3; [Templar Has Expert Prayer cast on them]
+
+    !!EA278:B6/1/115/48/0/0/0/1/1/1/2/2/2/2/3; [Paladin Has Expert Prayer cast on them]
+!!en;
+
+*****************************************************
+*Rampart*
+!!SN:W^Exp_TUM_Abilities^/?y1;[Check option for rebalanced abilities]
+!!if&y1=1;
+    !!EA293:B6/1/102/99/0/0/0/0/0/0/0/0/0/0/1; [Cantaure Generals get Champion Charge ability]
+
+    !!EA203:B6/1/115/46/0/0/0/1/1/1/2/2/2/2/3; [Dwarves have Expert Stone Skin on them]
+    !!EA203:B7/1/87/43/0/2/4/6/8/10/12/14/16/18/20; [Dwarves have +20% extra Magic Resistance at level 10]
+
+    !!EA256:B6/1/115/44/0/0/0/1/1/1/2/2/2/2/3; [Elves get Expert Precision]
+    !!EA256:B7/1/98/61/0/2/4/6/8/10/12/14/16/18/20; [Elves reduce 20% defense]
+
+    !!EA204:B6/1/115/49/0/0/0/1/1/1/2/2/2/2/3; [Pegasi have Mirth cast on them 49 Mirth]
+    !!EA204:B7/1/119/51/0/0/0/1/1/1/2/2/2/2/3; [Pegasi are immune to hostle level 1-3 spells]
+
+    !!EA205:B6/1/117/22/0/4/8/12/16/20/24/28/32/36/40; [Dendriods Summon Dendroids ]
+    !!EA205:B7/1/98/61/0/2/4/6/8/10/12/14/16/18/20; [Dendriods reduce defense]
+    !!EA205:B8/1/119/69/0/0/0/0/0/0/0/1/1/1/1; [Dendriods Give Immunity to Earth Spells]
+
+    !!EA206:B6/1/112/37/0/3/6/9/12/15/18/21/24/27/30; [Unicorns Cast Cure]
+    !!EA206:B7/1/97/62/0/2/4/6/8/10/12/14/16/18/20; [Unicorns get 20% +20% at ACE chance to Blind]
+
+    *!EA207:B6/1/76/99/0/5/10/15/20/25/30/35/40/45/50; [Pure Diamond Dragon Deflects 50% of Damage at level 10]
+
+    !!EA270:B6/1/115/46/0/0/0/1/1/1/2/2/2/2/3; [Dryad have Expert Stone Skin on them]
+    !!EA270:B7/1/119/69/0/0/0/0/0/0/0/1/1/1/1; [Dryad Give Immunity to Earth Spells]
+
+    !!EA279:B6/1/115/46/0/0/0/1/1/1/2/2/2/2/3; [Oak have Expert Stone Skin on them]
+    !!EA279:B7/1/119/69/0/0/0/0/0/0/0/1/1/1/1; [Oak Dryad Give Immunity to Earth Spells]
+!!en;
+
+*****************************************************
+*Tower*
+!!SN:W^Exp_TUM_Abilities^/?y1;[Check option for rebalanced abilities]
+!!if&y1=1;
+    !!EA255:B7/1/72/37/0/15/25/35/45/50/55/60/65/70/75; [GrandMaster Gremlins get extra max Health +25%]
+    !!EA255:B6/1/115/51/0/0/0/1/1/1/2/2/2/3/3; [GrandMaster Gremlins Have expert Fortune cast on them]
+    
+    !!EA208:B6/1/115/46/0/0/0/1/1/1/2/2/2/3/5; [Marble Gargoyles have Mass (5) Expert Stone Skin on them]
+
+    !!EA209:B6/1/99/47/0/15/25/35/45/50/55/60/65/70/75; [Golems cast Destruction Ray on attack]
+    !!EA209:B7/1/82/43/0/0/0/0/0/0/0/0/0/0/1; [Golems have one aditional Retaliations]
+
+    !!EA257:B6/1/105/43/0/0/0/0/0/0/0/0/0/0/1; [Mages get no Range Penalty]
+
+    !!EA210:B6/1/72/37/0/15/25/35/45/50/55/60/65/70/75; [Genies get extra max Health +25%]
+    !!EA210:B7/1/115/41/0/0/0/0/0/1/1/1/2/2/3; [Genies get maximum damage with Bless cast]
+
+    !!EA211:B6/1/101/43/0/3/6/9/12/15/18/21/24/27/30; [Naga chance to Death Blow 30%]
+
+    !!EA212:B6/1/112/57/0/3/6/9/12/15/18/21/24/27/30; [Zeuss Magican May Cast Titans Thunder(57) Before Attack]
+
+    !!EA271:B6/1/82/43/0/0/0/0/0/0/0/0/0/0/1; [Drake Golem have one aditional Retaliations]
+    !!EA271:B7/1/87/43/0/5/10/15/20/25/30/35/40/45/50; [Drake Golem have +50% extra Magic Resistance at level 10]
+
+    !!EA280:B6/1/82/43/0/0/0/0/0/0/0/0/0/0/1; [Dragon Golem have one aditional Retaliations]]
+    !!EA280:B7/1/87/43/0/5/10/15/20/25/30/35/40/45/50; [Dragon Golem have +50% extra Magic Resistance at level 10]
+!!en;
+
+*****************************************************
+*Inferno*
+!!SN:W^Exp_TUM_Abilities^/?y1;[Check option for rebalanced abilities]
+!!if&y1=1;
+    !!EA213:B6/1/115/51/0/0/0/1/1/1/2/2/2/3/5; [Imps Hellish Plaque have Mass (5) Fortune at ACE]
+
+    !!EA214:B6/1/105/43/0/0/0/0/0/0/0/0/0/0/1; [Magogs No Distance Penalty]
+    *!EA214:B7/1/112/22/0/0/0/0/0/0/0/0/0/0/0; [Magogs Cast Inferno after attack 50% chance]
+    *!EA214:B7/1/112/22/0/5/10/15/20/25/30/35/40/45/50; [Magogs Cast Inferno after attack 50% chance]
+
+    !!EA215:B6/1/75/73/0/15/25/35/45/50/55/60/65/70/75; [Cerberus have increased chance to cast Desease after attack]
+
+    !!EA216:B6/1/119/54/1/1/1/1/1/1/1/1/1/1/1; [Demons get nothing well imune to level 1 spells]
+
+    !!EA217:B6/1/117/48/0/4/8/12/16/20/24/28/32/36/40; [Pit lords summon Demons]
+    
+    !!EA218:B6/1/102/82/0/0/0/0/0/0/0/0/0/0/1; [Efreets No Enemy Retaliation]
+    
+    !!EA219:B6/1/97/70/0/2/4/6/8/10/12/14/16/18/20; [Antichrist Increased chance to Petrification 20%+20%]
+
+    !!EA272:B6/1/105/43/0/0/0/0/0/0/0/0/0/0/1; [Succubus gets No Distance Penalty]
+
+    !!EA281:B6/1/115/31/0/1/1/1/1/1/2/2/2/2/3; [Lilim gets Protection from Fire]
+    !!EA281:B7/1/105/43/0/0/0/0/0/0/0/0/0/0/1; [Lilim gets No Distance Penalty]
+!!en;
+
+*****************************************************
+*Necropolis*
+!!SN:W^Exp_TUM_Abilities^/?y1;[Check option for rebalanced abilities]
+!!if&y1=1;
+    !!EA220:B6/1/115/28/0/0/0/1/1/1/1/2/2/2/3; [Skeletons have Expert Air Shield cast on them]
+
+    !!EA329:B6/1/99/42/0/15/25/35/45/50/55/60/65/70/75; [Ghoul Cast Curse]
+    *!EA141:B7/1/103/37/0/3/6/9/12/15/18/21/24/27/30;   [Mummies get 30% Golem style Magic Resistance]
+    *!EA141:B8/1/72/37/0/15/25/35/45/50/55/60/65/70/75; [Mummies get extra max Health +25%]
+
+    !!EA261:B6/1/106/45/0/5/10/15/20/25/30/35/40/45/50; [Spectre has chance to cast before attack 45 Weakness]
+    !!EA261:B7/1/106/52/0/5/10/15/20/25/30/35/40/45/50; [Spectre has chance to cast before attack 52 Misfortune]
+
+    !!EA221:B6/1/75/50/0/5/10/15/20/25/30/35/40/45/50; [Vampires may cast Sorrow with attacks]
+
+    *!EA222:B6/1/112/24/0/5/10/15/20/25/30/35/40/45/50; [Liches cast Death Ripple before attack]
+    *!EA222:B7/1/80/43/0/0/1/1/1/1/2/2/2/2/3; [Power Liches gets additional casts]
+    !!EA222:B6/1/115/28/0/0/0/1/1/1/1/1/1/1/2; [Liches have Advanced(2) Air Shield (28)]
+
+    !!EA64:B6/1/115/28/0/0/0/1/1/1/1/1/1/1/2; [Liches have Advanced(2) Air Shield (28)]
+    !!EA65:B6/1/115/28/0/0/0/1/1/1/1/1/1/1/2; [Power Liches have Advanced(2) Air Shield (28)]
+
+    !!EA223:B6/1/101/43/0/3/6/9/12/15/18/21/24/27/30; [Death Knight chance to Death Blow 20%+30%]
+
+    !!EA224:B6/1/115/28/0/0/0/1/1/1/1/1/1/1/2; [Red Bone Dragons have Advanced(2) Air Shield (28)]
+
+    !!EA273:B6/1/114/100/0/15/25/35/45/50/55/60/65/70/75; [Werewolf has Regeneration]
+
+    !!EA194:B6/1/114/100/0/15/25/35/45/50/55/60/65/70/75; [Dire Werewolf has Regeneration]
+    !!EA194:B7/1/102/68/0/0/0/0/0/0/0/0/0/0/1; [Dire Werewolf has Double Strike]
+!!en;
+
+*****************************************************
+*Dungeon*
+!!SN:W^Exp_TUM_Abilities^/?y1;[Check option for rebalanced abilities]
+!!if&y1=1;
+    !!EA225:B6/1/75/54/0/5/10/15/20/25/30/35/40/45/50; [Troglodytes May cast Slow after attack 50% chance]
+
+    !!EA226:B6/1/102/68/0/0/0/0/0/0/0/0/0/0/1; [Evil Eyes get Double Strike at Ace level]
+
+    !!EA227:B6/1/99/42/0/5/10/15/20/25/30/35/40/45/50; [Harpies get 20+50% chance to cast Curse with attacks]
+    !!EA227:B7/1/115/51/0/0/0/0/0/1/1/1/2/2/3; [Harpies have Expert Luck cast on them]
+
+    !!EA228:B6/1/119/109/0/0/0/0/0/0/0/0/0/0/1; [Medusas are immune to hostile mind spells]
+
+    !!EA229:B6/1/101/43/0/3/6/9/12/15/18/21/24/27/30; [Minotaures Get additional chance to Death Blow attack]
+
+    !!EA230:B6/1/97/74/0/2/4/6/8/10/12/14/16/18/20; [Manticores get 20%+20% chance to paralyze]
+
+    *!EA231:B6/1/119/101/0/0/0/0/0/0/0/0/0/0/1; [Black Draongs have can accept friendly casts and can Dispel with attacks]
+
+    !!EA274:B6/1/119/109/0/0/0/0/0/0/0/0/0/0/1; [Illithids are immune to hostile mind spells at ACE level]
+
+    !!EA282:B6/1/119/109/0/0/0/0/0/0/0/0/0/0/1; [Alhoons are immune to hostile mind spells at ACE level]
+!!en;
+
+*****************************************************
+*Stronghold*
+!!SN:W^Exp_TUM_Abilities^/?y1;[Check option for rebalanced abilities]
+!!if&y1=1;
+    !!EA232:B6/1/102/82/0/0/0/0/0/0/0/0/0/0/1; [Hobgoblins have No Enemy Retaliation]
+
+    !!EA233:B6/1/102/99/0/0/0/0/0/0/0/0/0/0/1; [Wolf Raider get Champion Charge ability]
+
+    !!EA234:B6/1/119/49/1/1/1/1/1/1/1/1/1/1/1; [Orcs get nothing well imune to level 1 spells (except for beneficial)]
+
+    !!EA235:B6/1/76/49/0/3/6/9/12/15/18/21/24/27/30; [Ogers 30% chance to Deflect 50% of damage]
+
+    !!EA236:B6/1/74/17/0/5/10/15/20/25/30/35/40/45/50; [Thunderbirds chance to cast before attack advanced]
+    !!EA236:B7/1/75/17/0/5/10/15/20/25/30/35/40/45/50; [Thunderbirds chance to cast after attack advanced]
+    *!EA236:B8/1/112/17/0/3/6/9/12/15/18/21/24/27/30; Thunderbirds chance to cast before attack at expert level
+
+    !!EA237:B6/1/102/68/0/0/0/0/0/0/0/0/0/0/1; [Double Strike for Cyclops]
+
+    !!EA238:B6/1/119/69/1/1/1/1/1/1/1/1/1/1/1; [Behemots are immune to all Earth Spells]
+    !!EA238:B7/1/119/109/0/0/0/0/0/0/0/0/0/0/1; [Behemots are immune to hostile mind spells at ACE level]
+
+    !!EA275:B6/1/103/37/0/5/10/15/20/25/30/35/40/45/50; [Coatls Give +50% Magic Damage Reduction Golem Style]
+
+    !!EA283:B6/1/82/43/0/0/0/0/0/0/0/0/0/0/1; [QCoatls adds +1 Retaliation at ACE]
+    !!EA283:B7/1/103/37/0/5/10/15/20/25/30/35/40/45/50; [QCoatls Give +50% Magic Damage Reduction Golem Style]
+!!en;
+
+*****************************************************
+*Fortress*
+!!SN:W^Exp_TUM_Abilities^/?y1;[Check option for rebalanced abilities]
+!!if&y1=1;
+    !!EA321:B6/1/115/49/0/0/0/1/1/1/1/2/2/2/3; [Gnoll Shamans have Expert Mirth cast on them]
+
+    !!EA240:B6/1/99/71/0/5/10/15/20/25/30/35/40/45/50; [Elite Lizards have increased chance 30%+50% to cast Poison after attack]
+    !!EA240:B7/1/105/43/0/0/0/0/0/0/0/0/0/0/1; [Elite Lizards have no Distance penalty]
+
+    !!EA241:B6/1/102/65/0/0/0/0/0/0/0/0/0/0/1; [Dragonflies get Strike all Enemies around at ACE But should loose strikes and return]
+
+    !!EA242:B6/1/97/70/0/2/4/6/8/10/12/14/16/18/20; [Lava Basilisks Increased chance to Petrification 20%+20%]
+
+    !!EA244:B6/1/119/80/0/0/0/0/0/0/0/0/0/0/1; [Gorgons are immune to dispel]
+
+    !!EA243:B6/1/102/82/0/0/0/0/0/0/0/0/0/0/1; [Wyverns No Enemy Retaliation]
+
+    !!EA245:B6/1/102/73/0/0/0/0/0/0/0/0/0/0/1; [Hydra Immune to Fire 73]
+
+    !!EA276:B6/1/105/43/0/0/0/0/0/0/0/0/0/0/1; [Troll Hags have no Distance penalty]
+
+    !!EA284:B6/1/105/43/0/0/0/0/0/0/0/0/0/0/1; [Troll Witch have no Distance penalty]
+!!en;
+
+*****************************************************
+*Conflux*
+!!SN:W^Exp_TUM_Abilities^/?y1;[Check option for rebalanced abilities]
+!!if&y1=1;
+    !!EA246:B6/1/87/43/0/3/6/9/12/15/18/21/24/27/30; [Sprites have +30% extra Magic Resistance at level 10]
+    !!EA246:B7/1/72/37/0/10/20/30/40/50/60/70/80/90/100; [Sprites get extra max Health +50%]
+
+    !!EA247:B6/1/105/43/0/0/0/0/0/0/0/0/0/0/1; [Hurricane Elementals have no Distance penalty]
+    !!EA247:B7/1/115/30/0/0/0/1/1/1/2/2/2/3/5; [Lightning Elementals cast Mass Protection from Air]
+    !!EA247:B8/1/119/76/1/1/1/1/1/1/1/1/1/1/1; [Lightning Elementals are immune to all Air Spells]
+
+    !!EA248:B6/1/112/16/0/3/6/9/12/15/18/21/24/27/30; [Life/Ice Elementals chance to cast Ice Bolt before attack]
+    !!EA248:B7/1/119/67/1/1/1/1/1/1/1/1/1/1/1; [Life/Ice Elementals are immune to all Water/Ice Spells]
+
+    !!EA249:B6/1/72/37/0/15/25/35/45/50/55/60/65/70/75; [Fire Elementals get extra max Health +25%]
+    !!EA249:B7/1/97/21/0/10/20/30/40/50/60/70/80/90/100; [Fire Elementals cast Fireball with attack]
+
+    !!EA250:B6/1/117/113/0/3/6/9/12/15/18/21/24/27/30; [Earth Elements summon more Earth Elements]
+    !!EA250:B7/1/119/69/1/1/1/1/1/1/1/1/1/1/1; [Earth Elementals are immune to all Earth Spells]
+
+    !!EA251:B6/1/82/43/0/0/0/0/0/0/0/0/0/0/1; [Magic Elementals adds +1 Retaliation at ACE]
+
+    !!EA252:B6/1/103/37/0/5/10/15/20/25/30/35/40/45/50; [Phoenixes Give +50% Magic Damage Reduction Golem Style]
+
+    !!EA277:B6/1/102/68/0/0/0/0/0/0/0/0/0/0/1; [Triton gets Double Strike]
+
+    !!EA285:B6/1/82/43/0/0/0/0/0/0/0/0/0/0/1; [Abyssal Triton adds +1 Retaliation at ACE]
+    !!EA285:B7/1/102/68/0/0/0/0/0/0/0/0/0/0/1; [Abyssal Triton gets Double Strike]
+!!en;
+     
+
+****************************************************************************************************
+*TUM neutral creatures - one targeted Stack Experience ability per creature
+!!SN:W^Exp_TUM_Neutrals^/?y1;
+!!if&y1=1;
+    !!EA253:B6/1/69/61/0/3/6/9/12/15/18/21/24/27/30;       [Dark Tiamat: Death Stare]
+    !!EA254:B6/1/99/71/0/5/10/15/20/25/30/35/40/45/50;     [Necross Dragon: Poison after attack]
+    !!EA258:B6/1/115/36/0/1/1/1/2/2/2/3/3/4/4;             [Primal Faerie Dragon: Magic Mirror]
+    !!EA259:B6/1/108/193/0/5/10/15/20/25/30/35/40/45/50;   [Miracle Mage: Summon Enchanter clones]
+    !!EA260:B6/1/99/71/0/5/10/15/20/25/30/35/40/45/50;     [Assassin: Poison after attack]
+    !!EA262:B6/1/115/49/0/1/1/2/2/2/3/3/3/6/6;             [Satyr: Mirth]
+    !!EA263:B6/1/75/60/0/5/10/15/20/25/30/35/40/45/50;     [Fangarm: Hypnotize after attack]
+    !!EA264:B6/1/115/51/0/1/1/2/2/2/3/3/3/6/6;             [Leprechaun: Fortune]
+    !!EA265:B6/1/87/43/0/3/6/9/12/15/18/21/24/27/30;       [Topaz Crystal Dragon: Magic Resistance]
+    !!EA266:B6/1/98/61/0/3/6/9/12/15/18/21/24/27/30;       [Amethyst Crystal Dragon: Reduce Defense]
+    !!EA267:B6/1/114/100/0/9/18/27/36/45/54/63/72/81/90;   [Emerald Crystal Dragon: Regeneration]
+    !!EA268:B6/1/66/61/0/5/10/15/20/25/25/25/25/25/25;     [Sapphire Crystal Dragon: Block]
+
+    !!EA286:B6/1/112/24/0/5/10/15/20/25/30/35/40/45/50;    [Demilich: Death Ripple before attack]
+    !!EA287:B6/1/112/50/0/5/10/15/20/25/30/35/40/45/50;    [Dread Skipper: Sorrow before attack]
+    !!EA288:B6/1/97/16/0/5/10/15/20/25/30/35/40/45/50;     [Mermaid: Ice Bolt after attack]
+    !!EA289:B6/1/97/21/0/10/20/30/40/50/60/70/80/90/100;   [Fire Paladin: Fireball after attack]
+    !!EA290:B6/1/97/16/0/10/20/30/40/50/60/70/80/90/100;   [Ice Knight: Ice Bolt after attack]
+    !!EA292:B6/1/97/17/0/10/20/30/40/50/60/70/80/90/100;   [Thunder Warrior: Lightning Bolt after attack]
+    !!EA294:B6/1/114/100/0/9/18/27/36/45/54/63/72/81/90;   [Vermilion Bird: Regeneration]
+    !!EA295:B6/1/115/28/0/0/0/1/1/1/2/2/2/2/2;             [Skeleton Archer: Air Shield]
+    !!EA296:B6/1/115/28/0/0/0/1/1/1/2/2/2/2/2;             [Red Skeleton: Air Shield]
+    !!EA297:B6/1/67/43/0/1/1/1/2/2/2/3/3/3/4;              [Mana Skeleton: Reduce Casting Cost]
+    !!EA298:B6/1/115/28/0/0/0/1/1/1/2/2/2/2/2;             [Gold Skeleton: Air Shield]
+    !!EA299:B6/1/102/115/0/0/0/0/0/0/0/1/1/1/1;            [Sharpshooter Skeleton: Unblockable Shooter]
+
+    !!EA300:B6/1/85/139/0/10/20/30/40/50/60/70/80/90/100;  [Conscript: Summon Peasants]
+    !!EA301:B6/1/98/61/0/4/8/12/16/20/24/28/32/36/40;      [Squire: Reduce Defense]
+    !!EA302:B6/1/76/64/0/2/4/6/8/10/12/14/16/18/20;        [Man at Arms: Deflect Damage]
+    !!EA303:B6/1/115/46/0/0/0/1/1/2/2/2/2/5/5;             [Peon: Stone Skin]
+    !!EA304:B6/1/66/61/0/5/10/15/20/25/25/25/25/25/25;     [Entombed Sphinx: Block]
+    !!EA305:B6/1/82/43/0/0/0/0/0/1/1/2/2/3/4;              [Ashen Sphinx: Extra Retaliations]
+    !!EA306:B6/1/112/52/0/5/10/15/20/25/30/35/40/45/50;    [Dark Elemental: Misfortune before attack]
+    !!EA307:B6/1/87/43/0/4/8/12/16/20/24/28/32/36/40;      [Spirit Shaman: Magic Resistance]
+    !!EA308:B6/1/76/49/0/5/10/15/20/25/30/35/40/45/50;     [Wendigo: Deflect Damage]
+    !!EA309:B6/1/99/71/0/5/10/15/20/25/30/35/40/45/50;     [Plague Doctor: Poison after attack]
+    !!EA310:B6/1/115/51/0/1/1/2/2/2/3/3/3/6/6;             [Gnome: Fortune]
+    !!EA311:B6/1/114/100/0/9/18/27/36/45/54/63/72/81/90;   [Moss Thrall: Regeneration]
+    !!EA312:B6/1/69/61/0/1/2/3/4/5/6/7/8/9/10;             [Ravenous Cockatrice: Death Stare]
+    !!EA313:B6/1/102/68/2/2/2/2/2/2/2/1/1/1/1;             [Centamonth Hunter: Strike Twice]
+    !!EA314:B6/1/105/61/0/0/0/0/0/0/0/1/1/1/1;             [Centamonth Thrower: No Range Penalty]
+    !!EA315:B6/1/98/61/0/4/8/12/16/20/24/28/32/36/40;      [Stump Rider: Reduce Defense]
+    !!EA316:B6/1/117/193/0/2/4/6/8/10/12/14/16/18/20;      [Baba Yaga: Summon Sorceresses]
+    !!EA317:B6/1/119/68/0/0/0/0/0/0/0/1/1/1/1;             [Will-o-wisp: Immune to Direct Damage Spells]
+    !!EA318:B6/1/111/61/0/0/0/1/1/1/1/1/1/1/1;             [Archer Rider: No Obstacle Penalty]
+    !!EA319:B6/1/101/43/1/1/2/3/4/5/10/15/20/25/30;        [Lost Soul: Death Blow]
+    !!EA322:B6/1/108/26/1/5/10/15/20/25/25/30/30/35/35;    [Mirage Dragon: Summon Clones]
+    !!EA323:B6/1/85/83/1/5/10/15/20/25/25/30/30/35/35;     [Mirror Dragon: Summon Mirage Dragons]
+    !!EA324:B6/1/102/82/2/2/2/2/2/1/1/1/1/1/1;             [Shadow Lord: No Retaliation]
+    !!EA325:B6/1/99/75/0/8/16/24/32/40/48/56/64/72/80;     [Shadow Dragon: Aging after attack]
+
+    !!EA326:B6/1/99/71/0/5/10/15/20/25/30/35/40/45/50;     [Netherbat: Poison after attack]
+    !!EA327:B6/1/76/49/0/5/10/15/20/25/30/35/40/45/50;     [Rat: Deflect Damage]
+    !!EA328:B6/1/102/68/2/2/2/2/2/2/2/2/2/2/1;             [Battle Rat: Strike Twice]
+    !!EA330:B6/1/114/100/0/10/20/30/40/50/60/70/80/90/100; [Everlasting Dragon: Regeneration]
+    !!EA331:B6/1/115/43/0/0/0/0/1/1/2/2/3/3/3;             [Ratman: Bloodlust]
+    !!EA332:B6/1/97/21/0/5/10/15/20/25/30/35/40/45/50;     [Ratman Grenadier: Fireball after attack]
+    !!EA333:B6/1/112/24/0/5/10/15/20/25/30/35/40/45/50;    [Cultist: Death Ripple before attack]
+    !!EA334:B6/1/80/43/0/0/0/0/0/0/0/1/1/1/2;              [Cultist Leader: Additional Resurrection]
+    !!EA335:B6/1/99/71/0/5/10/15/20/25/35/45/55/65/75;     [Ooze: Poison after attack]
+    !!EA336:B6/1/76/49/0/5/10/15/20/25/30/35/40/45/50;     [Gel Ooze: Deflect Damage]
+    !!EA337:B6/1/115/28/0/0/0/0/0/0/1/1/1/1/2;             [Rook: Air Shield]
+    !!EA338:B6/1/102/102/0/0/0/0/0/1/1/1/1/1/1;            [Raven: Fearless]
+    !!EA339:B6/1/114/50/0/0/0/0/25/50/75/100/125/150/200;  [Sulfide Dragon: Regeneration]
+    !!EA340:B6/1/101/61/0/5/10/15/20/25/30/35/40/45/50;    [Swordmaster: Death Blow]
+    !!EA341:B6/1/119/1/0/0/0/0/1/1/1/1/1/1/1;              [Green Dragonling: Immunity to hostile level 1 spells]
+    !!EA342:B6/1/97/21/0/10/20/30/40/50/60/70/80/90/100;   [Red Dragonling: Fireball after attack]
+    !!EA343:B6/1/115/36/0/1/1/1/2/2/2/3/3/4/4;             [Faerie Dragonling: Magic Mirror]
+    !!EA344:B6/1/99/75/0/5/10/15/20/25/30/35/40/45/50;     [Rust Dragonling: Aging after attack]
+    !!EA345:B6/1/70/61/0/0/0/0/0/1/1/1/1/1/1;              [Azure Dragonling: Fear]
+    !!EA346:B6/1/112/21/0/10/20/30/40/50/60/70/80/90/100;  [Fire Dragon: Fireball before attack]
+    !!EA347:B6/1/112/16/0/10/20/30/40/50/60/70/80/90/100;  [Ice Dragon: Ice Bolt before attack]
+!!en;
+
+
+****************************************************************************************************
+
+****************************************************************************************************
+*WOG NEUTRAL ABILITY PACKAGE
+*The explicit neutral list controls which old rows are removed; this function assigns one B6 row each.
+!?FU(Stack_Exp_Apply_WoG_Neutral_Abilities);
+  !!EA132:B6/1/85/123/0/20/40/60/80/100/120/140/160/180/200; [Azure Dragon: Summon Ice Elementals]
+  !!EA133:B6/1/98/61/0/3/6/9/12/15/18/21/24/27/30;           [Crystal Dragon: Reduce Defense]
+  !!EA134:B6/1/112/65/0/5/10/15/20/25/30/35/40/45/50;       [Faerie Dragon: Clone target before attack]
+  !!EA135:B6/1/114/50/0/0/0/0/25/50/75/125/250/250/250;     [Rust Dragon: Regeneration]
+  !!EA136:B6/1/108/136/0/5/10/15/20/25/30/35/40/45/50;      [Enchanter: Summon Enchanter clones]
+  !!EA137:B6/1/102/115/0/0/0/0/0/0/0/1/1/1/1;               [Sharpshooter: Unblockable Shooter]
+  !!EA138:B6/1/102/102/0/0/0/0/0/0/0/1/1/1/1;               [Halfling: Fearless]
+  !!EA139:B6/1/85/139/0/10/20/30/40/50/60/70/80/90/100;     [Peasant: Summon Peasants]
+  !!EA140:B6/1/102/99/0/0/0/1/1/1/1/1/1/1/1;                [Boar: Champion Charge]
+  !!EA141:B6/1/97/42/0/2/4/6/8/10/12/14/16/18/20;           [Mummy: Curse after attack]
+  !!EA142:B6/1/102/98/0/0/0/1/1/1/1/1/1/1/1;                [Nomad: Strike and Return]
+  !!EA143:B6/1/99/71/0/0/0/0/0/0/0/20/30/40/50;             [Rogue: Poison after attack]
+  !!EA144:B6/1/102/114/0/0/0/1/1/1/1/1/1/1/1;               [Troll: Phoenix Rebirth]
+  !!EA159:B6/1/99/50/0/5/10/15/20/25/30/35/40/45/50;        [Ghost: Sorrow after attack]
+  !!EA160:B6/1/115/43/0/0/0/0/0/4/4/4/4/4/4;                [Emissary of War: Mass Bloodlust]
+  !!EA161:B6/1/115/27/0/0/0/0/0/4/4/4/4/4/4;                [Emissary of Peace: Mass Shield]
+  !!EA162:B6/1/67/43/0/0/1/1/2/2/3/3/4/4/5;                 [Emissary of Mana: Reduce Casting Cost]
+  !!EA163:B6/1/67/43/0/0/1/1/2/2/3/3/4/4/5;                 [Emissary of Lore: Reduce Casting Cost]
+  !!EA164:B6/1/107/13/0/5/10/15/20/25/30/35/40/45/50;       [Fire Messenger: Fire Wall after attack]
+  !!EA165:B6/1/97/10/0/5/10/15/20/25/30/35/40/45/50;        [Earth Messenger: Quicksand after attack]
+  !!EA166:B6/1/99/47/0/5/10/15/20/25/30/35/40/45/50;        [Air Messenger: Disrupting Ray after attack]
+  !!EA167:B6/1/97/16/0/5/10/15/20/25/30/35/40/45/50;        [Water Messenger: Ice Bolt after attack]
+  !!EA168:B6/1/114/100/0/0/0/0/0/50/50/50/50/50/50;         [Gorynych: Regeneration]
+  !!EA169:B6/1/105/61/0/0/0/0/0/0/0/0/1/1/1;                [War Zealot: No Range Penalty]
+  !!EA170:B6/1/102/115/0/0/0/0/0/0/0/1/1/1/1;               [Arctic Sharpshooter: Unblockable Shooter]
+  !!EA171:B6/1/102/115/0/0/0/0/0/0/0/1/1/1/1;               [Lava Sharpshooter: Unblockable Shooter]
+  !!EA172:B6/1/112/24/0/5/10/15/20/25/30/35/40/45/50;       [Nightmare: Death Ripple before attack]
+  !!EA173:B6/1/71/37/0/5/10/15/20/25/30/35/40/45/50;        [Santa Gremlin: Bonus Guards]
+  !!EA192:B6/1/119/1/0/0/0/0/0/0/1/1/1/1/1;                [Sylvan Centaur: Immunity to hostile level 1 spells]
+  !!EA193:B6/1/112/65/0/5/10/15/20/25/30/35/40/45/50;       [Sorceress: Clone target before attack]
+  !!EA194:B6/1/114/50/0/4/8/12/16/20/24/28/32/36/40;        [Dire Werewolf: Regeneration]
+  !!EA195:B6/1/97/21/0/5/10/15/20/25/30/35/40/45/50;        [Hell Steed: Fireball after attack]
+  !!EA196:B6/1/99/71/0/5/10/15/20/25/30/35/40/45/50;        [Dracolich: Poison after attack]
+
+****************************************************************************************************
+
+*WOG FACTION ABILITY PACKAGE
+*Each supported creature receives exactly one selected Stack Experience ability in B6.
+*The generic rebalance function removes the original B6-B19 entries before this dispatcher runs.
+
+!?FU(Stack_Exp_Apply_WoG_Faction_Abilities);
+!!FU(Stack_Exp_WoG_Castle_Abilities):P;
+!!FU(Stack_Exp_WoG_Rampart_Abilities):P;
+!!FU(Stack_Exp_WoG_Tower_Abilities):P;
+!!FU(Stack_Exp_WoG_Inferno_Abilities):P;
+!!FU(Stack_Exp_WoG_Necropolis_Abilities):P;
+!!FU(Stack_Exp_WoG_Dungeon_Abilities):P;
+!!FU(Stack_Exp_WoG_Stronghold_Abilities):P;
+!!FU(Stack_Exp_WoG_Fortress_Abilities):P;
+!!FU(Stack_Exp_WoG_Conflux_Abilities):P;
+!!FU(Stack_Exp_WoG_Level8_Abilities):P;
+
+****************************************************************************************************
+*Castle faction creatures
+!?FU(Stack_Exp_WoG_Castle_Abilities);
+  !!EA0:B6/1/102/66/2/2/2/2/2/1/1/1/1/1/1;                 [Pikeman: Two-hex attack]
+  !!EA1:B6/1/76/64/0/2/4/6/8/10/12/14/16/18/20;            [Halberdier: Deflect]
+  !!EA2:B6/1/98/61/0/4/8/12/16/20/24/28/32/36/40;          [Archer: Reduce Defense]
+  !!EA3:B6/1/98/61/0/2/4/6/8/10/12/14/16/18/20;            [Marksman: Reduce Defense]
+  !!EA4:B6/1/76/125/0/6/12/18/24/30/36/42/48/54/60;        [Griffin: Deflect]
+  !!EA5:B6/1/76/125/0/6/12/18/24/30/36/42/48/54/60;        [Royal Griffin: Deflect]
+  !!EA6:B6/1/101/61/0/5/10/15/20/25/30/35/40/45/50;        [Swordsman: Death Blow]
+  !!EA7:B6/1/101/61/0/2/5/7/10/12/15/17/20/22/25;          [Crusader: Death Blow]
+  !!EA8:B6/1/103/37/0/3/6/9/12/15/21/24/27/30/33;          [Monk: Reduced Spell Damage]
+  !!EA9:B6/1/114/100/0/0/0/0/0/50/50/50/50/50/50;         [Zealot: Regeneration]
+  !!EA10:B6/1/102/98/0/0/0/1/1/1/1/1/1/1/1;               [Cavalier: Strike and Return]
+  !!EA11:B6/1/102/82/2/2/2/2/2/1/1/1/1/1/1;               [Champion: No Retaliation]
+  !!EA12:B6/1/87/43/0/0/0/0/0/0/10/20/30/40/50;           [Angel: Magic Resistance]
+  !!EA13:B6/1/80/43/0/0/0/0/0/0/0/1/1/1/1;                [Archangel: Additional Resurrection]
+
+****************************************************************************************************
+*Rampart faction creatures
+!?FU(Stack_Exp_WoG_Rampart_Abilities);
+  !!EA14:B6/1/104/98/0/2/4/6/8/10/12/14/16/18/20;         [Centaur: Hatred against Gnolls]
+  !!EA15:B6/1/102/99/0/0/0/0/0/0/0/1/1/1/1;               [Centaur Captain: Champion Charge]
+  !!EA16:B6/1/115/27/0/0/0/0/0/0/0/1/1/1/2;               [Dwarf: Shield]
+  !!EA17:B6/1/87/43/0/4/8/12/16/20/24/28/32/36/40;         [Battle Dwarf: Magic Resistance]
+  !!EA18:B6/1/105/61/0/0/0/0/0/1/1/1/1/1/1;               [Wood Elf: No Range Penalty]
+  !!EA19:B6/1/115/44/0/0/0/0/0/1/1/1/1/1/1;               [Grand Elf: Precision]
+  !!EA20:B6/1/102/68/2/2/2/2/2/2/2/1/1/1/1;               [Pegasus: Strike Twice]
+  !!EA21:B6/1/102/98/0/0/0/0/0/1/1/1/1/1/1;               [Silver Pegasus: Strike and Return]
+  !!EA22:B6/1/114/100/0/5/10/15/20/25/30/35/40/45/50;      [Dendroid Guard: Regeneration]
+  !!EA23:B6/1/98/61/0/4/8/12/16/20/24/28/32/36/40;         [Dendroid Soldier: Reduce Defense]
+  !!EA24:B6/1/112/37/0/0/0/5/5/10/10/15/15/15/20;         [Unicorn: Cure before attack]
+  !!EA25:B6/1/97/62/0/0/5/5/10/10/15/15/20/25/30;         [War Unicorn: Blind after attack]
+  !!EA26:B6/1/82/43/0/0/0/0/0/1/1/1/1/1/2;                [Green Dragon: Additional Retaliations]
+  !!EA27:B6/1/102/102/0/0/0/0/0/1/1/1/1/1/1;              [Gold Dragon: Fearless]
+
+****************************************************************************************************
+*Tower faction creatures
+!?FU(Stack_Exp_WoG_Tower_Abilities);
+  !!EA28:B6/1/74/11/0/5/10/15/20/25/30/35/40/45/50;       [Gremlin: Land Mine before attack]
+  !!EA29:B6/1/74/11/0/5/10/15/20/25/30/35/40/45/50;       [Master Gremlin: Land Mine before attack]
+  !!EA30:B6/1/115/46/0/0/0/1/1/2/2/2/2/5/5;               [Stone Gargoyle: Stone Skin]
+  !!EA31:B6/1/115/46/0/0/0/1/1/2/2/2/2/5/5;               [Obsidian Gargoyle: Stone Skin]
+  !!EA32:B6/1/103/37/50/54/58/62/66/70/74/78/82/86/90;     [Stone Golem: Reduced Spell Damage]
+  !!EA33:B6/1/103/37/75/77/79/81/83/85/87/89/91/93/95;     [Iron Golem: Reduced Spell Damage]
+  !!EA34:B6/1/67/43/0/0/0/0/0/1/1/2/2/3/4;                [Mage: Reduced Casting Cost]
+  !!EA35:B6/1/67/43/0/0/0/0/0/1/1/2/2/3/4;                [Arch Mage: Reduced Casting Cost]
+  !!EA36:B6/1/119/72/0/0/0/0/0/1/1/1/1/1/1;               [Genie: Immunity to Hypnotize]
+  !!EA37:B6/1/80/43/0/0/0/0/0/1/1/2/2/3/3;                [Master Genie: Additional Castings]
+  !!EA38:B6/1/82/43/0/0/0/0/0/1/1/2/2/3/4;                [Naga: Additional Retaliations]
+  !!EA39:B6/1/101/43/0/1/2/3/4/5/10/15/20/25/30;           [Naga Queen: Death Blow]
+  !!EA40:B6/1/102/68/2/2/2/2/2/2/2/1/1/1/1;               [Giant: Strike Twice]
+  !!EA41:B6/1/105/61/0/0/0/0/0/0/0/0/0/1/1;               [Titan: No Range Penalty]
+
+****************************************************************************************************
+*Inferno faction creatures
+!?FU(Stack_Exp_WoG_Inferno_Abilities);
+  !!EA42:B6/1/115/51/0/1/1/1/1/2/2/2/3/3/3;               [Imp: Fortune]
+  !!EA43:B6/1/115/51/0/1/1/1/1/2/2/2/3/3/3;               [Familiar: Fortune]
+  !!EA44:B6/1/102/68/2/2/2/2/2/2/2/1/1/1/1;               [Gog: Shoot Twice]
+  !!EA45:B6/1/112/21/0/5/10/15/20/25/30/35/40/45/50;      [Magog: Fireball before attack]
+  !!EA46:B6/1/102/68/2/2/2/2/2/2/1/1/1/1/1;               [Hell Hound: Strike Twice]
+  !!EA47:B6/1/97/73/0/5/10/15/20/25/30/35/40/45/50;       [Cerberus: Disease after attack]
+  !!EA48:B6/1/76/74/0/1/2/3/4/5/10/15/20/25/30;           [Demon: Deflect]
+  !!EA49:B6/1/101/61/0/0/0/5/10/15/20/25/30/40/50;        [Horned Demon: Death Blow]
+  !!EA50:B6/1/117/48/0/0/0/10/10/15/15/20/20/25/25;       [Pit Fiend: Summon Demons]
+  !!EA51:B6/1/117/49/0/0/0/5/5/10/10/15/15/20/20;         [Pit Lord: Summon Horned Demons]
+  !!EA52:B6/1/115/29/0/0/0/0/0/0/0/1/1/2/3;               [Efreet: Fire Shield]
+  !!EA53:B6/1/102/82/2/2/2/2/2/2/2/1/1/1/1;               [Efreet Sultan: No Retaliation]
+  !!EA54:B6/1/112/52/0/5/10/15/20/25/30/35/40/45/50;      [Devil: Misfortune before attack]
+  !!EA55:B6/1/99/59/0/5/10/15/20/25/30/35/40/45/50;       [Arch Devil: Berserk after attack]
+
+****************************************************************************************************
+*Necropolis faction creatures
+!?FU(Stack_Exp_WoG_Necropolis_Abilities);
+  !!EA56:B6/1/115/28/0/0/0/1/1/1/2/2/2/2/2;               [Skeleton: Air Shield]
+  !!EA57:B6/1/115/28/0/0/0/1/1/1/2/2/2/2/2;               [Skeleton Warrior: Air Shield]
+  !!EA58:B6/1/75/54/0/5/10/15/20/25/30/35/40/45/50;       [Walking Dead: Slow after attack]
+  !!EA59:B6/1/99/73/0/8/16/24/32/40/48/56/64/72/80;       [Zombie: Disease after attack]
+  !!EA60:B6/1/74/45/0/5/10/15/20/25/30/35/40/45/50;       [Wight: Weakness before attack]
+  !!EA61:B6/1/112/52/0/5/10/15/20/25/30/35/40/45/50;      [Wraith: Misfortune before attack]
+  !!EA62:B6/1/98/61/0/5/10/15/20/25/30/35/40/45/50;       [Vampire: Reduce Defense]
+  !!EA63:B6/1/97/60/0/2/4/6/8/10/12/14/16/18/20;          [Vampire Lord: Hypnotize after attack]
+  !!EA64:B6/1/112/24/0/5/10/15/20/25/30/35/40/45/50;      [Lich: Death Ripple before attack]
+  !!EA65:B6/1/112/24/0/5/10/15/20/25/30/35/40/45/50;      [Power Lich: Death Ripple before attack]
+  !!EA66:B6/1/97/78/0/10/20/30/40/50/60/70/80/90/100;     [Black Knight: Dispel beneficial spells]
+  !!EA67:B6/1/101/61/20/28/36/44/52/60/68/76/84/92/100;    [Dread Knight: Death Blow]
+  !!EA68:B6/1/102/68/2/2/2/2/2/2/2/1/1/1/1;               [Bone Dragon: Strike Twice]
+  !!EA69:B6/1/99/75/0/8/16/24/32/40/48/56/64/72/80;       [Ghost Dragon: Aging after attack]
+
+****************************************************************************************************
+*Dungeon faction creatures
+!?FU(Stack_Exp_WoG_Dungeon_Abilities);
+  !!EA70:B6/1/99/54/0/3/6/9/12/15/18/21/24/27/30;         [Troglodyte: Slow after attack]
+  !!EA71:B6/1/119/70/0/0/0/0/0/0/0/1/1/1/1;               [Infernal Troglodyte: Fire immunity]
+  !!EA72:B6/1/99/42/0/5/10/15/20/25/30/35/40/45/50;       [Harpy: Curse after attack]
+  !!EA73:B6/1/99/73/0/5/10/15/20/25/30/35/40/45/50;       [Harpy Hag: Disease after attack]
+  !!EA74:B6/1/99/61/0/5/10/15/20/25/30/35/40/45/50;       [Beholder: Forgetfulness after attack]
+  !!EA75:B6/1/119/109/0/0/0/0/0/0/0/1/1/1/1;              [Evil Eye: Mind-spell immunity]
+  !!EA76:B6/1/97/70/0/0/0/5/5/10/10/15/20/25/30;          [Medusa: Petrification after attack]
+  !!EA77:B6/1/105/43/0/0/0/0/0/0/0/1/1/1/1;               [Medusa Queen: No Range Penalty]
+  !!EA78:B6/1/98/61/0/4/8/12/16/20/24/28/32/36/40;        [Minotaur: Reduce Defense]
+  !!EA79:B6/1/101/43/0/3/6/9/12/15/18/21/24/27/30;        [Minotaur King: Death Blow]
+  !!EA80:B6/1/99/71/0/5/10/15/20/25/30/35/40/45/50;       [Manticore: Poison after attack]
+  !!EA81:B6/1/97/74/0/0/0/0/0/5/5/10/10/15/20;            [Scorpicore: Paralyze after attack]
+  !!EA82:B6/1/102/102/0/0/0/0/0/1/1/1/1/1/1;              [Red Dragon: Fearless]
+  !!EA83:B6/1/99/78/0/5/10/15/20/25/30/35/40/45/50;       [Black Dragon: Dispel beneficial spells]
+
+****************************************************************************************************
+*Stronghold faction creatures
+!?FU(Stack_Exp_WoG_Stronghold_Abilities);
+  !!EA84:B6/1/102/68/2/2/2/2/2/2/2/1/1/1/1;               [Goblin: Strike Twice]
+  !!EA85:B6/1/102/68/2/2/2/2/2/2/2/1/1/1/1;               [Hobgoblin: Strike Twice]
+  !!EA86:B6/1/102/82/2/2/2/2/2/2/2/1/1/1/1;               [Wolf Rider: No Retaliation]
+  !!EA87:B6/1/102/82/2/2/2/2/2/2/2/1/1/1/1;               [Wolf Raider: No Retaliation]
+  !!EA88:B6/1/102/68/2/2/2/2/2/1/1/1/1/1/1;               [Orc: Shoot Twice]
+  !!EA89:B6/1/102/68/2/2/2/2/2/1/1/1/1/1/1;               [Orc Chieftain: Shoot Twice]
+  !!EA90:B6/1/76/74/0/2/5/7/10/12/15/17/20/22/25;         [Ogre: Deflect]
+  !!EA91:B6/1/112/43/0/0/0/4/7/10/13/16/19/22/25;         [Ogre Magi: Bloodlust before attack]
+  !!EA92:B6/1/97/17/0/5/10/15/20/25/30/35/40/45/50;       [Roc: Lightning Bolt after attack]
+  !!EA93:B6/1/97/17/0/5/10/15/20/25/30/35/40/45/50;       [Thunderbird: Lightning Bolt after attack]
+  !!EA94:B6/1/112/14/0/10/20/30/40/50/60/60/60/60/60;     [Cyclops: Earthquake before attack]
+  !!EA95:B6/1/112/14/0/10/20/30/40/50/60/60/60/60/60;     [Cyclops King: Earthquake before attack]
+  !!EA96:B6/1/102/68/2/2/2/2/2/2/2/1/1/1/1;               [Behemoth: Strike Twice]
+  !!EA97:B6/1/102/68/2/2/2/2/2/2/2/1/1/1/1;               [Ancient Behemoth: Strike Twice]
+
+****************************************************************************************************
+*Fortress faction creatures
+!?FU(Stack_Exp_WoG_Fortress_Abilities);
+  !!EA98:B6/1/115/49/0/0/0/0/0/1/1/1/1/2/2;               [Gnoll: Mirth]
+  !!EA99:B6/1/115/49/0/0/0/0/0/1/1/1/1/2/2;               [Gnoll Marauder: Mirth]
+  !!EA100:B6/1/99/71/0/5/10/15/20/25/30/35/40/45/50;      [Lizardman: Poison after attack]
+  !!EA101:B6/1/99/71/0/5/10/15/20/25/30/35/40/45/50;      [Lizard Warrior: Poison after attack]
+  !!EA102:B6/1/70/61/0/0/0/0/0/1/1/1/1/1/1;               [Gorgon: Fear]
+  !!EA103:B6/1/69/61/10/13/16/19/22/25/28/31/34/37/40;     [Mighty Gorgon: Death Stare]
+  !!EA104:B6/1/102/65/2/2/2/2/2/2/2/1/1/1/1;              [Serpent Fly: Attack all adjacent enemies]
+  !!EA105:B6/1/102/65/2/2/2/2/2/2/2/1/1/1/1;              [Dragon Fly: Attack all adjacent enemies]
+  !!EA106:B6/1/97/70/0/3/6/9/12/15/18/21/24/27/30;        [Basilisk: Petrification after attack]
+  !!EA107:B6/1/97/70/0/3/6/9/12/15/18/21/24/27/30;        [Greater Basilisk: Petrification after attack]
+  !!EA108:B6/1/99/71/0/5/10/15/20/25/35/45/55/65/75;      [Wyvern: Poison after attack]
+  !!EA109:B6/1/99/71/0/5/10/15/20/25/35/45/55/65/75;      [Wyvern Monarch: Poison after attack]
+  !!EA110:B6/1/82/43/0/0/0/0/0/1/1/2/2/3/4;               [Hydra: Additional Retaliations]
+  !!EA111:B6/1/76/49/0/5/10/15/20/25/30/35/40/45/50;      [Chaos Hydra: Deflect]
+
+****************************************************************************************************
+*Conflux faction creatures
+!?FU(Stack_Exp_WoG_Conflux_Abilities);
+  !!EA112:B6/1/115/28/0/1/1/1/2/2/2/2/5/5/5;              [Air Elemental: Air Shield]
+  !!EA113:B6/1/87/43/0/2/4/6/8/10/11/12/13/14/15;         [Earth Elemental: Magic Resistance]
+  !!EA114:B6/1/115/29/0/1/1/1/2/2/2/3/3/3/3;              [Fire Elemental: Fire Shield]
+  !!EA115:B6/1/115/41/0/0/1/1/1/2/2/2/5/5/5;              [Water Elemental: Bless]
+  !!EA116:B6/1/103/37/85/87/89/91/93/95/97/99/100/100/100; [Gold Golem: Reduced Spell Damage]
+  !!EA117:B6/1/103/37/95/96/97/98/99/100/100/100/100/100/100; [Diamond Golem: Reduced Spell Damage]
+  !!EA118:B6/1/99/47/0/20/25/30/35/40/45/50/55/60/65;      [Pixie: Disrupting Ray after attack]
+  !!EA119:B6/1/87/43/0/2/4/6/8/10/12/14/16/18/20;         [Sprite: Magic Resistance]
+  !!EA120:B6/1/99/60/0/2/4/6/8/10/12/14/16/18/20;         [Psychic Elemental: Hypnotize after attack]
+  !!EA121:B6/1/67/43/0/1/1/1/2/2/2/3/3/3/4;               [Magic Elemental: Reduced Casting Cost]
+  !!EA123:B6/1/112/16/0/1/2/3/4/5/6/7/8/9/10;             [Ice Elemental: Ice Bolt before attack]
+  !!EA125:B6/1/117/113/0/10/20/30/40/50/60/70/80/90/100;  [Magma Elemental: Summon Earth Elementals]
+  !!EA127:B6/1/115/30/0/1/1/1/1/2/2/2/2/3/5;              [Storm Elemental: Protection from Air]
+  !!EA129:B6/1/115/29/0/1/1/1/1/2/2/2/3/3/3;              [Energy Elemental: Fire Shield]
+  !!EA130:B6/1/115/49/0/1/1/2/2/2/3/3/3/6/6;              [Firebird: Mirth]
+  !!EA131:B6/1/80/43/0/0/0/0/0/0/0/0/0/0/1;               [Phoenix: Additional Rebirth]
+
+****************************************************************************************************
+*WoG level 8 faction creatures
+!?FU(Stack_Exp_WoG_Level8_Abilities);
+  !!EA150:B6/1/80/43/0/0/0/0/0/0/0/1/1/1/1;               [Supreme Archangel: Additional Resurrection]
+  !!EA151:B6/1/76/200/0/5/10/15/20/25/30/35/40/45/50;      [Diamond Dragon: Deflect]
+  !!EA152:B6/1/105/61/0/0/0/0/0/0/0/0/0/1/1;              [Lord of Thunder: No Range Penalty]
+  !!EA153:B6/1/112/50/0/5/10/15/20/25/30/35/40/45/50;      [Antichrist: Mass Sorrow]
+  !!EA154:B6/1/99/75/0/8/16/24/32/40/48/56/64/72/80;       [Blood Dragon: Aging after attack]
+  !!EA155:B6/1/99/59/0/3/6/9/12/15/18/21/24/27/30;         [Darkness Dragon: Berserk after attack]
+  !!EA156:B6/1/102/68/2/2/2/2/2/2/2/1/1/1/1;               [Ghost Behemoth: Strike Twice]
+  !!EA157:B6/1/82/43/0/0/0/0/0/1/1/2/2/3/4;                [Hell Hydra: Additional Retaliations]
+  !!EA158:B6/1/80/43/0/0/0/1/1/1/1/2/2/2/3;                [Sacred Phoenix: Additional Rebirth]
+
+!?FU(Stack_Experience_Rebalance_Fkt);
+
+!!VRy10:S0;                             [Base value is zero, meaning no rank starts from nothing]
+
+****************
+*Health settings in percent 
+
+!!SN:W^Exp_Health_Set^/?y1;             [Get value in y1]
+!!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+!!VRy1:Sy2:10;
+
+!!re i/0/9;
+    !!VRy99:S20+i;                      [Fill variables from y20 till y29]
+    !!VRyy99:Sy1*i+y1;                  [Add 5% increment]
+!!en;
+****************
+
+
+****************
+*Attack and Defense settings in flat value
+
+!!SN:W^Exp_Att_Def_Set^/?y1;            [Get value in y1]
+!!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+!!VRy1:Sy2:10;
+
+!!re i/0/9;
+    !!VRy99:S30+i;                      [Fill variables from y20 till y29]
+    !!VRyy99:Sy1*i+y1:10;               [Add flat increment]
+!!en;
+****************
+
+
+****************
+*Min and Max Damage settings in percent
+
+!!SN:W^Exp_MinMax_Damage_Set^/?y1;      [Get value in y1]
+!!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+!!VRy1:Sy2:10;
+
+!!re i/0/9;
+    !!VRy99:S40+i;                      [Fill variables from y20 till y29]
+    !!VRyy99:Sy1*i+y1;                  [Add % increment]
+!!en;
+****************
+
+
+****************
+*Speed in percent value
+
+!!SN:W^Exp_Speed_Set^/?y1;              [Get value in y1]
+!!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+!!VRy1:Sy2:10;
+
+!!re i/0/9;
+    !!VRy99:S50+i;                      [Fill variables from y20 till y29]
+    !!VRyy99:Sy1*i+y1;                  [Add % increment]
+!!en;
+****************
+
+!!re i/x1/x2:;                          [Process the selected creature ID range]
+    !!if&x3=1;                          [run rebalanced stats active]
+        !!EAi:B0/1/72/37/y10/y20/y21/y22/y23/y24/y25/y26/y27/y28/y29; [Health]
+        !!EAi:B1/1/65/43/y10/y30/y31/y32/y33/y34/y35/y36/y37/y38/y39; [Attack]
+        !!EAi:B2/1/68/43/y10/y30/y31/y32/y33/y34/y35/y36/y37/y38/y39; [Defense]
+        !!EAi:B3/1/109/37/y10/y40/y41/y42/y43/y44/y45/y46/y47/y48/y49; [Min Damage]
+        !!EAi:B4/1/77/37/y10/y40/y41/y42/y43/y44/y45/y46/y47/y48/y49; [Max Damage]
+        !!EAi:B5/1/83/37/y10/y50/y51/y52/y53/y54/y55/y56/y57/y58/y59; [Speed]
+    !!en;
+
+    [Faction creatures follow their general ability option. Listed neutral creatures follow their separate neutral option.]
+    !!VRy98:S-1;
+    !!FU(Array_IndexOf)&x5>0:Px5/i/?y98;
+    !!VRy97:Sx4;
+    !!VRy97&y98>-1:Sx6;
+
+    !!if&y97=1;                         [Remove old abilities before adding the rebalanced selection]
+        !!EAi&i<>231:B6/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [This will delete all Exp lines 6-19 after speed]
+        !!EAi&i<>231:B7/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B8/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B9/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B10/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B11/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B12/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B13/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B14/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B15/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B16/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B17/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B18/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+        !!EAi:B19/0/d/d/d/d/d/d/d/d/d/d/d/d/d; [...]
+    !!en;    
+!!en:;
+
+
+****************************************************************************************************
+** function to add specialty text      
+!?FU(Set_Monster_Special_Text);
+
+!!SN:H^monname^/220/2/^%T(Stack_Exp.creatureDescriptions.220)^; [Skeletons Knights]
+!!SN:H^monname^/232/2/^%T(Stack_Exp.creatureDescriptions.232)^; [Hobgoblins Overlord]
+*!SN:H^monname^/192/2/z222102;          [Sylvian Centaure]
+
+!!SN:H^monname^/247/2/^%T(Stack_Exp.creatureDescriptions.247)^; [Hurricane Elementals]
+!!SN:H^monname^/248/2/^%T(Stack_Exp.creatureDescriptions.248)^; [Life Elementals]
+!!SN:H^monname^/249/2/^%T(Stack_Exp.creatureDescriptions.249)^; [Plasma Elementals]
+!!SN:H^monname^/250/2/^%T(Stack_Exp.creatureDescriptions.250)^; [Mineral Elementals]
+
+!!SN:H^monname^/261/2/^%T(Stack_Exp.creatureDescriptions.261)^; [Spectre]
+!!SN:H^monname^/202/2/^%T(Stack_Exp.creatureDescriptions.202)^; [Seraph]
+
+
+!!SN:H^monname^/219/2/^%T(Stack_Exp.creatureDescriptions.219)^; [Antichrist]
+
+!!SN:H^monname^/242/2/^%T(Stack_Exp.creatureDescriptions.242)^; [Lava Basilisk]
+!!SN:H^monname^/243/2/^%T(Stack_Exp.creatureDescriptions.243)^; [Wyvern]
+
+!!SN:H^monname^/212/2/^%T(Stack_Exp.creatureDescriptions.212)^; [Guardians of Zeus]
+
+!!SN:H^monname^/238/2/^%T(Stack_Exp.creatureDescriptions.238)^; [Spectral Behemoths]
+
+!!SN:H^monname^/234/2/^%T(Stack_Exp.creatureDescriptions.234)^; [Orc Leaders]
+!!SN:H^monname^/236/2/^%T(Stack_Exp.creatureDescriptions.236)^; [Lightning Bird]
+
+!!SN:H^monname^/274/2/^%T(Stack_Exp.creatureDescriptions.274)^; [Illithids]
+!!SN:H^monname^/282/2/^%T(Stack_Exp.creatureDescriptions.282)^; [Alhoons]
+
+****************************************************************************************************
+
+
+
+                    Stack Experience Rebalance Config Window
+
+
+
+
+****************************************************************************************************
+!?FU(Stack_Exp_Normalize_Settings);     [Keep progression selectors in the valid range 1-13]
+
+!!SN:W^Exp_Health_Set^/?y1;
+!!SN|y1<1/y1>13:W^Exp_Health_Set^/11;  [Medium preset: 100%]
+
+!!SN:W^Exp_Att_Def_Set^/?y1;
+!!SN|y1<1/y1>13:W^Exp_Att_Def_Set^/11; [Medium preset: +10]
+
+!!SN:W^Exp_Speed_Set^/?y1;
+!!SN|y1<1/y1>13:W^Exp_Speed_Set^/2;    [Medium preset: 10%]
+
+!!SN:W^Exp_MinMax_Damage_Set^/?y1;
+!!SN|y1<1/y1>13:W^Exp_MinMax_Damage_Set^/11; [Medium preset: 100%]
+
+
+!?FU(Stack_Exp_Get_TUM_Status);        [Return 0=available, 1=TUM inactive, 2=Legacy conflict]
+!!VRx1:S0;
+!!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y1;
+!!VRx1&y1=0:S1;
+!!SN:W^Legacy_of_the_Silence_Active^/?y2;
+!!VRx1&y2=1:S2;
+
+
+!?FU(Stack_Exp_Apply_Preset);          [x1: 1=Low, 2=Medium, 3=High]
+!!SN&x1=1:W^Exp_Health_Set^/6;         [Low: 50% Health]
+!!SN&x1=1:W^Exp_Att_Def_Set^/6;        [Low: +5 Attack and Defense]
+!!SN&x1=1:W^Exp_Speed_Set^/1;          [Low: 0% Speed]
+!!SN&x1=1:W^Exp_MinMax_Damage_Set^/6;  [Low: 50% Damage]
+
+!!SN&x1=2:W^Exp_Health_Set^/11;        [Medium: 100% Health]
+!!SN&x1=2:W^Exp_Att_Def_Set^/11;       [Medium: +10 Attack and Defense]
+!!SN&x1=2:W^Exp_Speed_Set^/2;          [Medium: 10% Speed]
+!!SN&x1=2:W^Exp_MinMax_Damage_Set^/11; [Medium: 100% Damage]
+
+!!SN&x1=3:W^Exp_Health_Set^/12;        [High: 150% Health]
+!!SN&x1=3:W^Exp_Att_Def_Set^/12;       [High: +15 Attack and Defense]
+!!SN&x1=3:W^Exp_Speed_Set^/3;          [High: 20% Speed]
+!!SN&x1=3:W^Exp_MinMax_Damage_Set^/12; [High: 150% Damage]
+
+!!FU(Stack_Exp_checkboxes):P;
+!!FU(Stack_Exp_Update_Preset_Labels):P;
+
+
+!?FU(Stack_Exp_Update_Preset_Labels);  [Show preset names and highlight an exact match]
+!!SN:T^Stack_Exp.preset_low^/?z60 T^Stack_Exp.preset_medium^/?z61 T^Stack_Exp.preset_high^/?z62;
+!!SN:W^Exp_Health_Set^/?y1;
+!!SN:W^Exp_Att_Def_Set^/?y2;
+!!SN:W^Exp_Speed_Set^/?y3;
+!!SN:W^Exp_MinMax_Damage_Set^/?y4;
+!!SN&y1=6/y2=6/y3=1/y4=6:T^Stack_Exp.preset_low_selected^/?z60;
+!!SN&y1=11/y2=11/y3=2/y4=11:T^Stack_Exp.preset_medium_selected^/?z61;
+!!SN&y1=12/y2=12/y3=3/y4=12:T^Stack_Exp.preset_high_selected^/?z62;
+!!DL169:A43/3/z60/1 A44/3/z61/1 A45/3/z62/1;
+
+
+!?FU(Stack_Exp_Set_Dialog_Texts);      [Translated labels and concise mouse-over hints]
+!!SN:T^Stack_Exp.Stack_Exp_Head^/?z19;
+!!SN:T^Stack_Exp.section_wog^/?z30 T^Stack_Exp.section_tum^/?z31;
+!!SN:T^Stack_Exp.Stack_Option_1^/?z20 T^Stack_Exp.Stack_Option_2^/?z21 T^Stack_Exp.Stack_Option_3^/?z22;
+!!SN:T^Stack_Exp.Stack_Option_4^/?z23 T^Stack_Exp.Stack_Option_5^/?z24 T^Stack_Exp.Stack_Option_6^/?z25;
+!!FU(Stack_Exp_Get_TUM_Status):P?y10;
+!!SN&y10=1:T^Stack_Exp.section_tum_inactive^/?z31;
+!!SN&y10=1:T^Stack_Exp.Stack_Option_4_Inactive^/?z23 T^Stack_Exp.Stack_Option_5_Inactive^/?z24 T^Stack_Exp.Stack_Option_6_Inactive^/?z25;
+!!SN&y10=2:T^Stack_Exp.section_tum_blocked^/?z31;
+!!SN&y10=2:T^Stack_Exp.Stack_Option_4_Blocked^/?z23 T^Stack_Exp.Stack_Option_5_Blocked^/?z24 T^Stack_Exp.Stack_Option_6_Blocked^/?z25;
+!!SN:T^Stack_Exp.stat_health^/?z70 T^Stack_Exp.stat_attack_defense^/?z71 T^Stack_Exp.stat_speed^/?z72 T^Stack_Exp.stat_damage^/?z73;
+!!DL169:A1/3/z19/1 A30/3/z30/1 A31/3/z31/1;
+!!DL169:A20/3/z20/1 A21/3/z21/1 A22/3/z22/1 A23/3/z23/1 A24/3/z24/1 A25/3/z25/1;
+!!DL169:A70/3/z70/1 A71/3/z71/1 A72/3/z72/1 A73/3/z73/1;
+
+!!SN:T^Stack_Exp.hint_section_wog^/?z40 T^Stack_Exp.hint_section_tum^/?z41;
+!!SN&y10=1:T^Stack_Exp.tum_inactive_info^/?z41;
+!!SN&y10=2:T^Stack_Exp.tum_blocked_info^/?z41;
+!!DL169:H30/40 H31/41;
+
+!!SN:T^Stack_Exp.hint_option_1^/?z42 T^Stack_Exp.hint_option_2^/?z43 T^Stack_Exp.hint_option_3^/?z44;
+!!SN:T^Stack_Exp.hint_option_4^/?z45 T^Stack_Exp.hint_option_5^/?z46 T^Stack_Exp.hint_option_6^/?z47;
+!!SN&y10=1:T^Stack_Exp.tum_inactive_info^/?z45 T^Stack_Exp.tum_inactive_info^/?z46 T^Stack_Exp.tum_inactive_info^/?z47;
+!!SN&y10=2:T^Stack_Exp.tum_blocked_info^/?z45 T^Stack_Exp.tum_blocked_info^/?z46 T^Stack_Exp.tum_blocked_info^/?z47;
+!!DL169:H10/42 H20/42 H11/43 H21/43 H12/44 H22/44;
+!!DL169:H13/45 H23/45 H14/46 H24/46 H15/47 H25/47;
+
+!!SN:T^Stack_Exp.preset_low_hint^/?z48 T^Stack_Exp.preset_medium_hint^/?z49 T^Stack_Exp.preset_high_hint^/?z50;
+!!DL169:H2/48 H43/48 H3/49 H44/49 H4/50 H45/50;
+
+!!SN:T^Stack_Exp.stat_health_hint^/?z51 T^Stack_Exp.stat_attack_defense_hint^/?z52;
+!!SN:T^Stack_Exp.stat_speed_hint^/?z53 T^Stack_Exp.stat_damage_hint^/?z54;
+!!DL169:H70/51 H92/51 H47/51 H48/51 H71/52 H93/52 H49/52 H50/52;
+!!DL169:H72/53 H94/53 H51/53 H52/53 H73/54 H95/54 H53/54 H54/54;
+
+
+!?FU(Configure_Stack_Exp_Rebalance);    [open the Stack Exp Rebalance settings]
+
+  !!FU(Stack_Exp_Normalize_Settings):P;
+  !!FU(Stack_Exp_Get_TUM_Status):P?y10;
+  !!SN&y10=2:W^Exp_TUM_Stats^/0;
+  !!SN&y10=2:W^Exp_TUM_Abilities^/0;
+  !!SN&y10=2:W^Exp_TUM_Neutrals^/0;
+
+  *Store the current values so Cancel can restore the complete configuration
+  !!SN:W^Exp_WoG_Stats^/?y1;            !!SN:W^StackExp_Backup_WoG_Stats^/y1;
+  !!SN:W^Exp_WoG_Abilities^/?y1;        !!SN:W^StackExp_Backup_WoG_Abilities^/y1;
+  !!SN:W^Exp_WoG_Neutrals^/?y1;         !!SN:W^StackExp_Backup_WoG_Neutrals^/y1;
+  !!SN:W^Exp_TUM_Stats^/?y1;            !!SN:W^StackExp_Backup_TUM_Stats^/y1;
+  !!SN:W^Exp_TUM_Abilities^/?y1;        !!SN:W^StackExp_Backup_TUM_Abilities^/y1;
+  !!SN:W^Exp_TUM_Neutrals^/?y1;         !!SN:W^StackExp_Backup_TUM_Neutrals^/y1;
+  !!SN:W^Exp_Health_Set^/?y1;           !!SN:W^StackExp_Backup_Health^/y1;
+  !!SN:W^Exp_Att_Def_Set^/?y1;          !!SN:W^StackExp_Backup_AttDef^/y1;
+  !!SN:W^Exp_Speed_Set^/?y1;            !!SN:W^StackExp_Backup_Speed^/y1;
+  !!SN:W^Exp_MinMax_Damage_Set^/?y1;    !!SN:W^StackExp_Backup_Damage^/y1;
+
+  !!DL169:N^Sta_Exp.txt^;               [Name of Dialogue text file Parse Dialogue]
+
+  !!FU(Stack_Exp_Set_Dialog_Texts):P;
+  !!FU(Stack_Exp_checkboxes):P;
+  !!FU(Stack_Exp_Update_Preset_Labels):P;
+
+  !!SN:T^Stack_Exp.cancel_button_hint^/?z43; [left text]
+  !!DL169:H30721/43;                    [set cancel button hint text]
+  !!SN:T^Stack_Exp.confirm_button_hint_0^/?z44; [left text]
+  !!DL169:H30722/44;                    [set confirm button hint text]
+  !!DL169:S1;                           [Show complete Dialogue number 169]
+
+
+!?DL&v998=169/v999>9/v999<16/v1000=13; [checkboxes switch between check and cancel]
+; Play sound only when not clicking on a button - by Archer30
+*!if&i^mouse_item^<>30722/i^mouse_item^<>30721;
+  *!VRz1:S^Button.wav^;
+  *!SN:Pz1;
+*!en;
+
+!!FU(Stack_Exp_Get_TUM_Status):P?y10;
+!!if&y10=2;                             [Legacy shares TUM creature IDs, so those options must remain disabled]
+  !!SN:W^Exp_TUM_Stats^/0;
+  !!SN:W^Exp_TUM_Abilities^/0;
+  !!SN:W^Exp_TUM_Neutrals^/0;
+!!en;
+
+!!SN:W^Exp_WoG_Stats^/?y1;
+!!SN:W^Exp_WoG_Abilities^/?y2;
+!!SN:W^Exp_WoG_Neutrals^/?y3;
+!!SN:W^Exp_TUM_Stats^/?y4;
+!!SN:W^Exp_TUM_Abilities^/?y5;
+!!SN:W^Exp_TUM_Neutrals^/?y6;
+
+!!SN&v999=10/y1=0:W^Exp_WoG_Stats^/1;   [swith for 1st]
+!!SN&v999=10/y1=1:W^Exp_WoG_Stats^/0;
+
+!!SN&v999=11/y2=0:W^Exp_WoG_Abilities^/1;
+!!SN&v999=11/y2=1:W^Exp_WoG_Abilities^/0;
+
+!!SN&v999=12/y3=0:W^Exp_WoG_Neutrals^/1;
+!!SN&v999=12/y3=1:W^Exp_WoG_Neutrals^/0;
+
+!!SN&v999=13/y4=0/y10=0:W^Exp_TUM_Stats^/1;
+!!SN&v999=13/y4=1/y10=0:W^Exp_TUM_Stats^/0;
+
+!!SN&v999=14/y5=0/y10=0:W^Exp_TUM_Abilities^/1;
+!!SN&v999=14/y5=1/y10=0:W^Exp_TUM_Abilities^/0; 
+
+!!SN&v999=15/y6=0/y10=0:W^Exp_TUM_Neutrals^/1;
+!!SN&v999=15/y6=1/y10=0:W^Exp_TUM_Neutrals^/0;
+
+!!FU(Stack_Exp_checkboxes):P;           [call func for switch on the user's choice]
+
+
+!?DL&v998=169/v999>1/v999<5/v1000=13; [Apply Low, Medium or High by clicking its image]
+!!FU(Stack_Exp_Apply_Preset)&v999=2:P1;
+!!FU(Stack_Exp_Apply_Preset)&v999=3:P2;
+!!FU(Stack_Exp_Apply_Preset)&v999=4:P3;
+
+!?DL&v998=169/v999>42/v999<46/v1000=13; [Preset captions are clickable as well]
+!!FU(Stack_Exp_Apply_Preset)&v999=43:P1;
+!!FU(Stack_Exp_Apply_Preset)&v999=44:P2;
+!!FU(Stack_Exp_Apply_Preset)&v999=45:P3;
+
+
+!?FU(Stack_Exp_checkboxes);             [Set checkboxes function]
+
+!!SN:W^Exp_WoG_Stats^/?y1;
+!!SN:W^Exp_WoG_Abilities^/?y2;
+!!SN:W^Exp_WoG_Neutrals^/?y3;
+!!SN:W^Exp_TUM_Stats^/?y4;
+!!SN:W^Exp_TUM_Abilities^/?y5;
+!!SN:W^Exp_TUM_Neutrals^/?y6;
+!!FU(Stack_Exp_Get_TUM_Status):P?y10;
+!!VRy4&y10>0:S0;                       [Unavailable TUM options are visibly unchecked]
+!!VRy5&y10>0:S0;
+!!VRy6&y10>0:S0;
+
+!!DL169:A10/4/y1/1 A11/4/y2/1 A12/4/y3/1;
+!!DL169:A13/4/y4/1 A14/4/y5/1 A15/4/y6/1;
+
+
+!!SN:W^Exp_Health_Set^/?y1;        
+!!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200; 
+!!VRz72:S^%Y2%^;
+
+!!SN:W^Exp_Att_Def_Set^/?y1; 
+!!VRy2&y1=1:S0; !!VRy2&y1=2:S10;   !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200; !!VRy2::10;
+!!VRz73:S^%Y2^;
+
+!!SN:W^Exp_Speed_Set^/?y1;         
+!!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+!!VRz74:S^%Y2%^;
+
+!!SN:W^Exp_MinMax_Damage_Set^/?y1; 
+!!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+!!VRz75:S^%Y2%^;
+
+!!DL169:A92/3/z72/1 A93/3/z73/1 A94/3/z74/1 A95/3/z75/1;
+
+*Here set variables for Stack Experience values
+!?DL&v998=169/v999>46/v999<49/v1000=13; [switch by little arrows for options 1-4]
+Health Percentage Based
+
+
+!!if&v999=47;                           [If clicked on the left arrow ]
+   !!SN:W^Exp_Health_Set^/?y1;          [Get value in y1]
+   !!SN&y1>1:W^Exp_Health_Set^/d-1;     [Reduce value by -1 if bigger zero]
+   !!SN:W^Exp_Health_Set^/?y1;          [Get new value in y1]
+   !!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+   !!VRz72:S^%Y2%^; !!DL169:A92/3/z72/1;
+!!en;
+!!if&v999=48;
+  !!SN:W^Exp_Health_Set^/?y1;
+  !!SN&y1<13:W^Exp_Health_Set^/d1;
+  !!SN:W^Exp_Health_Set^/?y1;
+   !!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+  !!VRz72:S^%Y2%^; !!DL169:A92/3/z72/1;
+!!en;
+!!FU(Stack_Exp_Update_Preset_Labels):P;
+
+!?DL&v998=169/v999>48/v999<51/v1000=13; [switch by little arrows for options 1-4]
+Attack and Defence Flat Values
+
+!!if&v999=49;                           [If clicked on the left arrow ]
+   !!SN:W^Exp_Att_Def_Set^/?y1;         [Get value in y1]
+   !!SN&y1>1:W^Exp_Att_Def_Set^/d-1;    [Reduce value by -1 if bigger zero]
+   !!SN:W^Exp_Att_Def_Set^/?y1;         [Get new value in y1]
+   !!VRy2&y1=1:S0; !!VRy2&y1=2:S1; !!VRy2&y1=3:S2; !!VRy2&y1=4:S3; !!VRy2&y1=5:S4; !!VRy2&y1=6:S5; !!VRy2&y1=7:S6; !!VRy2&y1=8:S7; !!VRy2&y1=9:S8; !!VRy2&y1=10:S9; !!VRy2&y1=11:S10; !!VRy2&y1=12:S15; !!VRy2&y1=13:S20;
+   !!VRz73:S^%Y2^; !!DL169:A93/3/z73/1;
+!!en;
+!!if&v999=50;
+  !!SN:W^Exp_Att_Def_Set^/?y1;
+  !!SN&y1<13:W^Exp_Att_Def_Set^/d1;
+  !!SN:W^Exp_Att_Def_Set^/?y1;
+   !!VRy2&y1=1:S0; !!VRy2&y1=2:S1; !!VRy2&y1=3:S2; !!VRy2&y1=4:S3; !!VRy2&y1=5:S4; !!VRy2&y1=6:S5; !!VRy2&y1=7:S6; !!VRy2&y1=8:S7; !!VRy2&y1=9:S8; !!VRy2&y1=10:S9; !!VRy2&y1=11:S10; !!VRy2&y1=12:S15; !!VRy2&y1=13:S20;
+  !!VRz73:S^%Y2^; !!DL169:A93/3/z73/1;
+!!en;
+!!FU(Stack_Exp_Update_Preset_Labels):P;
+
+
+!?DL&v998=169/v999>50/v999<53/v1000=13; [switch by little arrows for options 1-4]
+Speed Percentage Based
+
+!!if&v999=51;                           [If clicked on the left arrow ]
+   !!SN:W^Exp_Speed_Set^/?y1;           [Get value in y1]
+   !!SN&y1>1:W^Exp_Speed_Set^/d-1;      [Reduce value by -1 if bigger zero]
+   !!SN:W^Exp_Speed_Set^/?y1;           [Get new value in y1]
+   !!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+   !!VRz74:S^%Y2%^; !!DL169:A94/3/z74/1;
+!!en;
+!!if&v999=52;
+  !!SN:W^Exp_Speed_Set^/?y1;
+  !!SN&y1<13:W^Exp_Speed_Set^/d1;
+  !!SN:W^Exp_Speed_Set^/?y1;
+   !!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+  !!VRz74:S^%Y2%^; !!DL169:A94/3/z74/1;
+!!en;
+!!FU(Stack_Exp_Update_Preset_Labels):P;
+
+
+!?DL&v998=169/v999>52/v999<55/v1000=13; [switch by little arrows for options 1-4]
+Min Max Damage Percentage Based
+
+!!if&v999=53;                           [If clicked on the left arrow ]
+   !!SN:W^Exp_MinMax_Damage_Set^/?y1;   [Get value in y1]
+   !!SN&y1>1:W^Exp_MinMax_Damage_Set^/d-1; [Reduce value by -1 if bigger zero]
+   !!SN:W^Exp_MinMax_Damage_Set^/?y1;   [Get new value in y1]
+   !!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+   !!VRz75:S^%Y2%^; !!DL169:A95/3/z75/1;
+!!en;
+!!if&v999=54;
+  !!SN:W^Exp_MinMax_Damage_Set^/?y1;
+  !!SN&y1<13:W^Exp_MinMax_Damage_Set^/d1;
+  !!SN:W^Exp_MinMax_Damage_Set^/?y1;
+   !!VRy2&y1=1:S0; !!VRy2&y1=2:S10; !!VRy2&y1=3:S20; !!VRy2&y1=4:S30; !!VRy2&y1=5:S40; !!VRy2&y1=6:S50; !!VRy2&y1=7:S60; !!VRy2&y1=8:S70; !!VRy2&y1=9:S80; !!VRy2&y1=10:S90; !!VRy2&y1=11:S100; !!VRy2&y1=12:S150; !!VRy2&y1=13:S200;
+  !!VRz75:S^%Y2%^; !!DL169:A95/3/z75/1;
+!!en;
+!!FU(Stack_Exp_Update_Preset_Labels):P;
+
+
+!?DL&v998=169/v1000=14;                 [Show right click information for fixed options]
+
+!!SN|v999=2/v999=43:T^Stack_Exp.preset_low_info^/?s^Text^;
+!!IF|v999=2/v999=43:M0/4/^%S(Text)^;
+
+!!SN|v999=3/v999=44:T^Stack_Exp.preset_medium_info^/?s^Text^;
+!!IF|v999=3/v999=44:M0/4/^%S(Text)^;
+
+!!SN|v999=4/v999=45:T^Stack_Exp.preset_high_info^/?s^Text^;
+!!IF|v999=4/v999=45:M0/4/^%S(Text)^;
+
+!!SN&v999=20:T^Stack_Exp.Stack_Option_1_Info^/?s^Text^; [set text for 1st]
+!!IF&v999=20:M0/4/^%S(Text)^;           [show it 1 - 5]
+
+!!SN&v999=21:T^Stack_Exp.Stack_Option_2_Info^/?s^Text^; [2nd]
+!!IF&v999=21:M0/4/^%S(Text)^;
+
+!!SN&v999=22:T^Stack_Exp.Stack_Option_3_Info^/?s^Text^; [...]
+!!IF&v999=22:M0/4/^%S(Text)^;
+
+!!FU(Stack_Exp_Get_TUM_Status):P?y10;
+!!SN&v999=23/y10=0:T^Stack_Exp.Stack_Option_4_Info^/?s^Text^;
+!!SN&v999=23/y10=1:T^Stack_Exp.tum_inactive_info^/?s^Text^;
+!!SN&v999=23/y10=2:T^Stack_Exp.tum_blocked_info^/?s^Text^;
+!!IF&v999=23:M0/4/^%S(Text)^;
+
+!!SN&v999=24/y10=0:T^Stack_Exp.Stack_Option_5_Info^/?s^Text^;
+!!SN&v999=24/y10=1:T^Stack_Exp.tum_inactive_info^/?s^Text^;
+!!SN&v999=24/y10=2:T^Stack_Exp.tum_blocked_info^/?s^Text^;
+!!IF&v999=24:M0/4/^%S(Text)^;
+
+!!SN&v999=25/y10=0:T^Stack_Exp.Stack_Option_6_Info^/?s^Text^;
+!!SN&v999=25/y10=1:T^Stack_Exp.tum_inactive_info^/?s^Text^;
+!!SN&v999=25/y10=2:T^Stack_Exp.tum_blocked_info^/?s^Text^;
+!!IF&v999=25:M0/4/^%S(Text)^;
+
+
+!?DL&v998=169/v999=30721/v1000=13;      [When clicking on the close Button in Stack Exp Rebalance Exit and reset all options]
+!!SN:W^StackExp_Backup_WoG_Stats^/?y1;      !!SN:W^Exp_WoG_Stats^/y1;
+!!SN:W^StackExp_Backup_WoG_Abilities^/?y1;  !!SN:W^Exp_WoG_Abilities^/y1;
+!!SN:W^StackExp_Backup_WoG_Neutrals^/?y1;   !!SN:W^Exp_WoG_Neutrals^/y1;
+!!SN:W^StackExp_Backup_TUM_Stats^/?y1;      !!SN:W^Exp_TUM_Stats^/y1;
+!!SN:W^StackExp_Backup_TUM_Abilities^/?y1;  !!SN:W^Exp_TUM_Abilities^/y1;
+!!SN:W^StackExp_Backup_TUM_Neutrals^/?y1;   !!SN:W^Exp_TUM_Neutrals^/y1;
+!!SN:W^StackExp_Backup_Health^/?y1;         !!SN:W^Exp_Health_Set^/y1;
+!!SN:W^StackExp_Backup_AttDef^/?y1;         !!SN:W^Exp_Att_Def_Set^/y1;
+!!SN:W^StackExp_Backup_Speed^/?y1;          !!SN:W^Exp_Speed_Set^/y1;
+!!SN:W^StackExp_Backup_Damage^/?y1;         !!SN:W^Exp_MinMax_Damage_Set^/y1;
+!!DL:C1;
+
+!?DL&v998=169/v999=30722/v1000=13;      [Close Dialogue with Confirm Button and apply all settings]
+!!DL:C1;
+
+
+
+
+
+****************************************************************************************************
+
+!?MR2;                                  [Magic Res Trigger]
+*Give immunity for own troops from Stack Experience triggered spells*
+!!FU:E;
+!!BG:A?y1 N?y4;                         [Aktion in y1]
+!!FU&y1=1:E;                            [Exit if Hero cast]
+!!BMy4:T?y5 N?y6 I?y7;                  [Get Creature Type and Number of Creatures and side]
+!!MR:S?y2 F?y3;                         [Spell in y2]
+!!FU|y2=<15/y2>=27:E;                   [Exit if no mass spell]
+!!FU|y5=149:E;
+!!if|y1=0/y1=6/y1=7:;  
+    !!MR:N?y10;                         [Get casting stack]
+    !!BMy10:I?y11;                      [Get stacks side]    
+    !!MR&y11=y7:F100;                   [Disable Magic damage for same side]
+!!en:;
+
+
+!?MF1; 
+* Guardians of Zeus*
+*have a chance to cast Titans Thunder with ranged attacks*
+!!SN:W^Exp_TUM_Abilities^/?y1;          [Check option for TUM rebalanced abilities]
+!!FU&y1=0:E;                            [Exit if option was not checked]
+!!VRy99:S0T99;
+!!FU&y99>25:E;                          [25% chance to cast]
+ 
+!!UN:C42149568/4/?y10;                  [Get Physical Damage type]
+!!FU&y10<>4455011:E;                    [Only Trigger when shooting]
+!!MF:W?y80 F?y1 N?y4; !!FU|y80>0/y1=0:E;[Exit if Moat damage or no damage]
+!!BG:A?y1 N?y2 D?y3;                    [action type, Attacking stack number, Destination Poistion and Hero]
+!!if&y1=7/y2<>y4/y3>=0/y3<=186:; 
+    !!BMy2:T?y5;                        [Creature Type]
+    !!FU&y5<>212:E;                     [if Zeus]
+    !!BMy2:C57/y3/3/3/1;                [Cast 57 Titan's Lightning Bolt at Stack Position]
+!!en:;
+
+
+****************************************************************************************************
+!#SN:W^StackBalance_SpellAttack1_Creature_100^/114; [114 Fire Elements]
+!#SN:W^StackBalance_SpellAttack1_Spell_100^/21; [21 Fireball]
+
+*Trigger Spell at attack position before damage animation*
+!?MF1;
+!!FU:E;
+
+!!UN:C42149568/4/?y10;                  [Get Physical Damage type]
+!!FU&y10<>4462398:E;                    [Only Trigger when doing a melee attack]
+
+!!MF:W?y80 F?y1 N?y4; !!FU|y80>0/y1=0:E;[Exit if Moat damage or no damage]
+!!SN:W^StackBalance_Damage_Receiving_Stack^/y4; 
+
+
+!!BG:A?y1 N?y2 D?y3;                    [action type, Attacking stack number, Destination Poistion and Hero]
+!!FU|y1<>6/y3=-1:E;                     [Exit if no melee attack]
+!!if&y1=6/y2<>y4/y3>=0/y3<=186:;
+    !!BMy2:T?y5;                        [Creature Type]
+    *!FU&y5<>242:E;                     [if Lava Basilisks]
+    !!BMy2:C21/y3/3/3/1;                [Cast Fireball at Stack Position]
+!!en:;
+****************************************************************************************************
+
+
+****************************************************************************************************
+!#SN:W^StackBalance_SpellAttack2_Creature_100^/114; [114 Fire Elements]
+!#SN:W^StackBalance_SpellAttack2_Spell_100^/21; [21 Fireball]
+!#SN:W^StackBalance_SpellAttack2_Chance_100^/100; [100% chance to trigger attack]
+!#SN:W^StackBalance_SpellAttack2_Scaling_100^/15; [Damage per Unit]
+
+*Trigger Spell at attack position after damage animation for melee attacks*
+!?MF1;
+!!SN:W^Exp_TUM_Abilities^/?y1;          [Check option for TUM rebalanced abilities]
+!!FU&y1=0:E;                            [Exit if option was not checked]
+
+!!UN:C42149568/4/?y10; !!FU&y10<>4462398:E; [Get Physical Damage type Only Trigger when doing a melee attack]
+!!MF:W?y80 F?y1 N?y4; !!FU|y80>0/y1=0:E;[Exit if Moat damage or no damage]
+!!SN:W^StackBalance_Damage_Receiving_Stack^/y4; [Save damage receiving stack]
+
+
+!?FU(Event_AfterMeeleDamage_Stack_Rebalance)&i^Exp_TUM_Abilities^;
+!!SN:W^StackBalance_Damage_Receiving_Stack^/?y4;
+!!SN:W^StackBalance_SpellAttack2_Creature_100^/?y20; [114 Fire Elements]
+!!SN:W^StackBalance_SpellAttack2_Spell_100^/?y21; [21 Fireball]
+!!SN:W^StackBalance_SpellAttack2_Chance_100^/?y22; [100% chance to trigger attack]
+!!SN:W^StackBalance_SpellAttack2_Scaling_100^/?y23; [Damage per Unit]
+
+!!VRy99:S0T99; !!FU&y99>y22:E;          [Exit if roll not successfull]
+
+!!UN:C42149568/4/?y10; !!FU&y10<>4462398:E; [Get Physical Damage type Only Trigger when doing a melee attack]
+
+!!BG:A?y1 N?y2 D?y3 E?y6;               [action type, Attacking stack number, Destination Poistion and Hero]
+!!FU|y1<>6/y6=-1:E;                     [Exit if no melee attack or no monster at position]
+!!BMy2:T?y5 N?y7;                       [Creature Type and number]
+!!if&y1=6/y3>=0/y3<=186/y5=y20/y4<>y2:;    
+    !!SSy21:E3/?y50;                    [get extra spell damage]
+    !!VRy8:Sy7*y23;                     [number of untis times modifier]
+    !!SSy21:E3/y8;                      [set new damage for fireball to also show damage when hitting several targets]
+    !!BMy2:Cy21/y3/3/3/1;               [Cast Expert Spell at Stack Position]
+    !!SSy21:E3/y50;                     [Revert damage to value from before]
+!!en:;
+
+
+!?MR1;                                  [*Magical Combat Improvements*]
+!!FU:E;
+*Make the damage scaling*
+!!SN:W^StackBalance_SpellAttack2_Creature_100^/?y20; [114 Fire Elements]
+!!SN:W^StackBalance_SpellAttack2_Spell_100^/?y21; [21 Fireball]
+
+!!BG:A?y1 N?y4;                         [Get Action, Spell Number and Creature Number]
+!!MR:D?y2 S?y3 N?y6;
+!!BMy4:T?y5 N?y7;                       [Get Creature Type and Number of Creatures]
+
+!!if&y3=y21/y5=y20/y6>0/y7>0/y2>0:;     [If Santa Gremlins casting Ice Bolt]
+    !!SS21:E3/?y50;
+    !!SN:W^StackBalance_SpellAttack2_Scaling_100^/?y10;    
+    !!VRy8:Sy7*y10 -y50;    
+    !!SS21:E3/y8; 
+    !!MR:Fy8;                           [Set new Damage]
+    !!SS21:E3/y50;                      [Revert damage]
+!!en:;
+
+
+!?FU(OnAfterErmInstructions);           
+!!SN:L^EraPlugins\erm_hooker.era^/?y1;  
+!!SN:Ay1/^SetHook^/?y2;                
+!!SN:Ey2/1/4462998/(Event_AfterMeeleDamage_Stack_Rebalance);
+!?FU(OnAfterLoadGame);                 
+!!SN:L^EraPlugins\erm_hooker.era^/?y1;  
+!!SN:Ay1/^SetHook^/?y2;                
+!!SN:Ey2/1/4462998/(Event_AfterMeeleDamage_Stack_Rebalance);
+
+
+
+****************************************************************************************************
+
+
+                                      Testing
+
+
+
+****************************************************************************************************
+
+!?FU(OnEveryDay)&i^timerOnce^=1/i^timerDay^=1;
+!!FU:E;
+
+!!MA:P278/160; Paladin
+!!MA:P269/120; Templar
+!!MA:P201/160; Champion
+!!MA:P223/140; Death Knight
+
+!!MA:P273/40; Werewolf
+!!MA:P194/50;
+
+!?HM-1;
+
+!!FU:E;
+
+!!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y1;
+
+!!VRy1&y1=0:S155;
+!!VRy1&y1=1:S291;
+!!FU(GetMaxMonsterId):P?y1;
+
+!!re i/0/y1:;
+    !!EAi:L1;                           [Sets Stack Exp to Ace after one fight]
+!!en:; 
+
+!!FU:E;
+
+*Summon First Level
+*!HE-1:C0/0/197/10; Castle
+*!HE-1:C0/1/192/10; Rampart
+*!HE-1:C0/2/255/10; Tower
+*!HE-1:C0/3/213/10; Inferno
+*!HE-1:C0/4/220/10; Nekropolis
+*!HE-1:C0/5/225/10; Dungeon
+*!HE-1:C0/6/232/10; Stronghold 
+*!HE-1:C0/5/239/10; Fortress
+*!HE-1:C0/6/246/10; Conflux 
+
+
+*Summon Second Level
+*!HE-1:C0/0/198/10; Castle
+*!HE-1:C0/1/203/10; Rampart
+*!HE-1:C0/2/208/10; Tower
+*!HE-1:C0/3/214/500; Inferno
+*!HE-1:C0/4/141/10; Nekropolis
+*!HE-1:C0/5/226/10; Dungeon
+*!HE-1:C0/6/233/10; Stronghold 
+*!HE-1:C0/5/240/10; Fortress
+*!HE-1:C0/6/247/10; Conflux 
+
+
+*Summon Third Level
+*!HE-1:C0/0/199/10; Castle
+*!HE-1:C0/1/204/10; Rampart
+*!HE-1:C0/2/256/10; Tower
+*!HE-1:C0/3/215/10; Inferno
+*!HE-1:C0/4/261/10; Nekropolis
+*!HE-1:C0/5/227/10; Dungeon
+*!HE-1:C0/6/234/10; Stronghold
+*!HE-1:C0/5/241/10; Fortress
+*!HE-1:C0/6/248/10; Conflux
+
+
+*Summon Fourth Level
+*!HE-1:C0/0/200/10; Castle
+*!HE-1:C0/1/204/10; Rampart
+*!HE-1:C0/2/257/10; Tower
+*!HE-1:C0/3/210/500; Inferno
+*!HE-1:C0/4/221/10; Nekropolis
+*!HE-1:C0/5/228/10; Dungeon
+*!HE-1:C0/6/235/10; Stronghold 
+*!HE-1:C0/5/242/100; Fortress
+*!HE-1:C0/6/249/10; Conflux 
+
+
+*Summon Fifth Level
+*!HE-1:C0/0/169/10; Castle
+*!HE-1:C0/1/205/10; Rampart
+*!HE-1:C0/2/210/10; Tower
+*!HE-1:C0/3/217/10; Inferno
+*!HE-1:C0/4/222/10; Nekropolis
+*!HE-1:C0/5/229/10; Dungeon
+*!HE-1:C0/6/236/10; Stronghold 
+*!HE-1:C0/5/244/10; Fortress
+*!HE-1:C0/6/250/10; Conflux 
+
+
+*Summon Sixth Level
+*!HE-1:C0/0/201/10; Castle
+*!HE-1:C0/1/206/10; Rampart
+*!HE-1:C0/2/211/10; Tower
+*!HE-1:C0/3/218/10; Inferno
+*!HE-1:C0/4/223/10; Nekropolis
+*!HE-1:C0/5/230/10; Dungeon
+*!HE-1:C0/6/237/10; Stronghold 
+*!HE-1:C0/5/243/100; Fortress
+*!HE-1:C0/6/251/100; Conflux 
+
+
+
+*Summon Seventh (3rd Upgrade WoG) Level
+*!HE-1:C0/0/150/10; Castle
+*!HE-1:C0/1/151/10; Rampart
+*!HE-1:C0/2/152/10; Tower
+*!HE-1:C0/3/153/500; Inferno
+*!HE-1:C0/4/154/10; Nekropolis
+*!HE-1:C0/5/155/10; Dungeon
+*!HE-1:C0/6/156/10; Stronghold 
+*!HE-1:C0/5/157/10; Fortress
+*!HE-1:C0/6/158/10; Conflux 
+
+
+*Summon Seventh (4th Upgrade) Level
+*!HE-1:C0/0/202/10; Castle
+*!HE-1:C0/1/207/10; Rampart
+*!HE-1:C0/2/212/10; Tower
+*!HE-1:C0/3/219/10; Inferno
+*!HE-1:C0/4/224/10; Nekropolis
+*!HE-1:C0/5/231/10; Dungeon
+*!HE-1:C0/6/238/10; Stronghold 
+*!HE-1:C0/5/245/10; Fortress
+*!HE-1:C0/6/252/10; Conflux 
+
+*!FU:E;
+*!HE-1:C0/0/247/1000; Castle
+*!HE-1:C0/1/248/1000; Rampart
+*!HE-1:C0/2/249/1000; Tower
+*!HE-1:C0/3/250/1000; Inferno
+*!HE-1:C0/3/214/10; Inferno
+
+
+****************************************************************************************************
+*!FU:E;
+*?HM-1;
+*!DO(AC_Function_541)/0/6/1:P-1;
+
+
+!?FU(AC_Function_541);
+!!HEx1:C0/x16/?y1/?y2;
+!!FU|y2<1/y1<0:E;
+!!IF:L^%Y1^;
+
+
+
+
+!?HM-1;
+!!EA214:B7/1/112/22/0/0/0/0/0/0/0/0/0/0/0; [Magogs Cast Inferno after attack 50% chance]
