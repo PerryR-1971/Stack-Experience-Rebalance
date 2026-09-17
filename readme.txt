@@ -1,4 +1,4 @@
-## Stack Experience Rebalance Mod 0.9 (Release Candidate)
+## Stack Experience Rebalance Mod 0.9
 
 Stack Experience Rebalance redesigns the bonuses that creature stacks gain through the WoG stack experience system. Instead of using the original progression tables, the mod can apply configurable stat growth and a selected set of experience abilities for WoG creatures and, when the Third Upgrade Mod is active, TUM creatures.
 
@@ -54,10 +54,11 @@ REQUIREMENTS AND CURRENT INTEGRATION
 ----------------------------------------------------------------------------------------------------------------------
 
 - Heroes of Might and Magic III with ERA 3 and the WoG stack experience system.
-- Difficulty Mod is currently required to open the configuration window and store its settings.
+- Era Erm Framework is required.
+- Difficulty Mod is optional and provides an additional entry to open the configuration window.
 - Third Upgrade Mod is optional, but is required for the TUM creature stats and ability package.
 
-The configuration window and its translated interface resources are contained in this mod. The old copy in Difficulty Mod has been disabled; only the menu entry and settings persistence remain there.
+The configuration window, default values and persistent settings are owned by this mod. Editable defaults are stored in `Lang/configuration.json`. Confirmed in-game settings are saved to `Runtime/stack experience rebalance.ini` and take precedence over the JSON defaults. Delete that INI to apply changed JSON defaults again. Difficulty Mod only provides an optional menu entry.
 
 When TUM is not active, its section is marked as unavailable and its switches cannot be changed. Legacy of the Silence uses overlapping creature IDs; when it is detected, the TUM section is marked as blocked and all TUM-specific switches are disabled automatically.
 
@@ -78,20 +79,25 @@ INSTALLATION
 1. Copy the `Stack-Exp-Rebalance` folder into the ERA `Mods` directory.
 2. Enable the mod in the ERA Mod Manager.
 3. Enable the WoG stack experience option.
-4. Configure the rebalance through the Difficulty Mod before starting or loading the game.
+4. Optional: configure the rebalance through Difficulty Mod or edit `Lang/configuration.json` before starting a scenario.
 5. Optional: activate the native TUM ability overrides as described under Compatibility Notes.
 
 ----------------------------------------------------------------------------------------------------------------------
 LATEST CHANGELOG
 ----------------------------------------------------------------------------------------------------------------------
 
-Version 0.9 - Release candidate
+Version 0.9
 
+- Made the mod independent from Difficulty Mod by moving loading and saving into the Stack Experience Rebalance scripts.
+- Reloaded Runtime settings after map initialization or savegame loading so restored map variables cannot overwrite them.
+- Added `Lang/configuration.json` with editable default values.
+- Added one-time migration of existing Stack Experience settings from `Runtime/difficulty mod.ini`.
 - Renamed the three quick selections to Low, Medium and High because they control stack-experience growth rather than game difficulty.
 - Added functional Low, Medium and High presets, exact-preset highlighting and Medium as the recommended reset/default.
 - Added translated section headings, clearer option names and mouse-over hints for presets, settings, values and controls.
 - Added visible handling for an inactive Third Upgrade Mod and for Legacy of the Silence ID conflicts.
 - Changed invalid or uninitialized progression values to the recommended Medium defaults.
+- Confirming the configuration now explicitly activates the mod, including when the window is opened through Difficulty Mod or Ingame Menu.
 
 - Moved native creature CFG overrides to the disabled folder so they are no longer loaded regardless of the selected options.
 - Limited TUM table processing to the highest creature ID supported by this version instead of every registered creature.

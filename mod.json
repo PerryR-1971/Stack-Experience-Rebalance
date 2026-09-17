@@ -15,10 +15,11 @@
   "compatibility": {
     "requires": [
       "WoG",
-      "Difficulty Mod"
+      "Era Erm Framework"
     ],
     "load_after": [
       "WoG",
+      "Era Erm Framework",
       "Difficulty Mod"
     ],
     "incompatible": []

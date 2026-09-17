@@ -2,6 +2,33 @@ ZVSE2
 !#SN:W^Stack_Exp_Rebalance_Mod_Active^/1; [Set the mod active]
 
 ****************************************************************************************************
+*PUBLIC CONFIGURATION
+*Hardcoded defaults are overridden by Lang/configuration.json.
+*Saved settings from Runtime/stack experience rebalance.ini take final precedence.
+!#VRi^Stack_Exp_Rebalance_On^:S(TRUE);
+!#VRi^Exp_WoG_Stats^:S(TRUE);
+!#VRi^Exp_WoG_Abilities^:S(TRUE);
+!#VRi^Exp_WoG_Neutrals^:S(TRUE);
+!#VRi^Exp_TUM_Stats^:S(TRUE);
+!#VRi^Exp_TUM_Abilities^:S(TRUE);
+!#VRi^Exp_TUM_Neutrals^:S(TRUE);
+!#VRi^Exp_Health_Set^:S11;
+!#VRi^Exp_Att_Def_Set^:S11;
+!#VRi^Exp_Speed_Set^:S2;
+!#VRi^Exp_MinMax_Damage_Set^:S11;
+!#VRi^Stack_Exp_Config_Loaded^:S(FALSE);
+
+!?FU(Stack_Exp_LoadJsonDefaults);
+!!FU(LoadIntGlobalsFromJson):P^stack_experience_rebalance.settings.^/^Stack_Exp_^/^Config_Loaded^;
+!!FU(LoadIntGlobalsFromJson)&i^Stack_Exp_Config_Loaded^:P^stack_experience_rebalance.settings.^/^Stack_Exp_^/
+  ^Rebalance_On^;
+!!FU(LoadIntGlobalsFromJson)&i^Stack_Exp_Config_Loaded^:P^stack_experience_rebalance.settings.^/^Exp_^/
+  ^WoG_Stats^/^WoG_Abilities^/^WoG_Neutrals^/^TUM_Stats^/^TUM_Abilities^/^TUM_Neutrals^/
+  ^Health_Set^/^Att_Def_Set^/^Speed_Set^/^MinMax_Damage_Set^;
+
+!#FU(Stack_Exp_LoadJsonDefaults):P;
+
+****************************************************************************************************
 *STACK EXPERIENCE REBALANCE MOD
 *Author: modified by Perry, 2020
 *
@@ -906,6 +933,9 @@ ZVSE2
 
 !?FU(Configure_Stack_Exp_Rebalance);    [open the Stack Exp Rebalance settings]
 
+  ; Runtime settings must win over named variables restored from a savegame.
+  ; Refresh them again immediately before displaying the configuration.
+  !!FU(Stack_Exp_LoadOptionsFromIni):P;
   !!FU(Stack_Exp_Normalize_Settings):P;
   !!FU(Stack_Exp_Get_TUM_Status):P?y10;
   !!SN&y10=2:W^Exp_TUM_Stats^/0;
@@ -1157,7 +1187,105 @@ Min Max Damage Percentage Based
 !!DL:C1;
 
 !?DL&v998=169/v999=30722/v1000=13;      [Close Dialogue with Confirm Button and apply all settings]
+!!SN:W^Stack_Exp_Rebalance_On^/1;       [A confirmed configuration activates the standalone mod]
+!!FU(Stack_Exp_SaveOptionsToIni):P;
 !!DL:C1;
+
+****************************************************************************************************
+*PERSISTENT RUNTIME CONFIGURATION
+****************************************************************************************************
+!?FU(Stack_Exp_LoadOptionsFromIni);
+!!VR(filePath:z):S^Runtime/stack experience rebalance.ini^;
+!!FU(FileExists):P(filePath)/?(ownIniExists:y);
+!!VR(legacyIniExists:y):S(FALSE);
+
+*One-time migration from the former Difficulty Mod-owned storage.
+!!if&(ownIniExists)=(FALSE);
+  !!VR(legacyPath:z):S^Runtime/difficulty mod.ini^;
+  !!FU(FileExists):P(legacyPath)/?(legacyIniExists:y);
+  !!if&(legacyIniExists);
+    !!FU(ReadIniInts):P(legacyPath)/^main^/
+      ^Stack_Exp_Rebalance_On^/?i^Stack_Exp_Rebalance_On^/i^Stack_Exp_Rebalance_On^/
+      ^Exp_WoG_Stats^/?i^Exp_WoG_Stats^/i^Exp_WoG_Stats^/
+      ^Exp_WoG_Abilities^/?i^Exp_WoG_Abilities^/i^Exp_WoG_Abilities^/
+      ^Exp_WoG_Neutrals^/?i^Exp_WoG_Neutrals^/i^Exp_WoG_Neutrals^;
+
+    !!FU(ReadIniInts):P(legacyPath)/^main^/
+      ^Exp_TUM_Stats^/?i^Exp_TUM_Stats^/i^Exp_TUM_Stats^/
+      ^Exp_TUM_Abilities^/?i^Exp_TUM_Abilities^/i^Exp_TUM_Abilities^/
+      ^Exp_TUM_Neutrals^/?i^Exp_TUM_Neutrals^/i^Exp_TUM_Neutrals^/
+      ^Exp_Health_Set^/?i^Exp_Health_Set^/i^Exp_Health_Set^;
+
+    !!FU(ReadIniInts):P(legacyPath)/^main^/
+      ^Exp_Att_Def_Set^/?i^Exp_Att_Def_Set^/i^Exp_Att_Def_Set^/
+      ^Exp_Speed_Set^/?i^Exp_Speed_Set^/i^Exp_Speed_Set^/
+      ^Exp_MinMax_Damage_Set^/?i^Exp_MinMax_Damage_Set^/i^Exp_MinMax_Damage_Set^;
+  !!en;
+!!el;
+
+  !!FU(ReadIniInts):P(filePath)/^StackExperience^/
+    ^Stack_Exp_Rebalance_On^/?i^Stack_Exp_Rebalance_On^/i^Stack_Exp_Rebalance_On^/
+    ^Exp_WoG_Stats^/?i^Exp_WoG_Stats^/i^Exp_WoG_Stats^/
+    ^Exp_WoG_Abilities^/?i^Exp_WoG_Abilities^/i^Exp_WoG_Abilities^/
+    ^Exp_WoG_Neutrals^/?i^Exp_WoG_Neutrals^/i^Exp_WoG_Neutrals^;
+
+  !!FU(ReadIniInts):P(filePath)/^StackExperience^/
+    ^Exp_TUM_Stats^/?i^Exp_TUM_Stats^/i^Exp_TUM_Stats^/
+    ^Exp_TUM_Abilities^/?i^Exp_TUM_Abilities^/i^Exp_TUM_Abilities^/
+    ^Exp_TUM_Neutrals^/?i^Exp_TUM_Neutrals^/i^Exp_TUM_Neutrals^/
+    ^Exp_Health_Set^/?i^Exp_Health_Set^/i^Exp_Health_Set^;
+
+  !!FU(ReadIniInts):P(filePath)/^StackExperience^/
+    ^Exp_Att_Def_Set^/?i^Exp_Att_Def_Set^/i^Exp_Att_Def_Set^/
+    ^Exp_Speed_Set^/?i^Exp_Speed_Set^/i^Exp_Speed_Set^/
+    ^Exp_MinMax_Damage_Set^/?i^Exp_MinMax_Damage_Set^/i^Exp_MinMax_Damage_Set^;
+!!en;
+
+!!VRi^Stack_Exp_Rebalance_On^:F(FALSE)/(TRUE);
+!!VRi^Exp_WoG_Stats^:F(FALSE)/(TRUE);
+!!VRi^Exp_WoG_Abilities^:F(FALSE)/(TRUE);
+!!VRi^Exp_WoG_Neutrals^:F(FALSE)/(TRUE);
+!!VRi^Exp_TUM_Stats^:F(FALSE)/(TRUE);
+!!VRi^Exp_TUM_Abilities^:F(FALSE)/(TRUE);
+!!VRi^Exp_TUM_Neutrals^:F(FALSE)/(TRUE);
+!!FU(Stack_Exp_Normalize_Settings):P;
+!!FU(Stack_Exp_SaveOptionsToIni)&(ownIniExists)=(FALSE)/(legacyIniExists):P;
+
+
+!?FU(Stack_Exp_SaveOptionsToIni);
+!!VR(filePath:z):S^Runtime/stack experience rebalance.ini^;
+
+!!FU(WriteIniInts):P(filePath)/^StackExperience^/
+  ^Stack_Exp_Rebalance_On^/i^Stack_Exp_Rebalance_On^/
+  ^Exp_WoG_Stats^/i^Exp_WoG_Stats^/
+  ^Exp_WoG_Abilities^/i^Exp_WoG_Abilities^/
+  ^Exp_WoG_Neutrals^/i^Exp_WoG_Neutrals^;
+
+!!FU(WriteIniInts):P(filePath)/^StackExperience^/
+  ^Exp_TUM_Stats^/i^Exp_TUM_Stats^/
+  ^Exp_TUM_Abilities^/i^Exp_TUM_Abilities^/
+  ^Exp_TUM_Neutrals^/i^Exp_TUM_Neutrals^/
+  ^Exp_Health_Set^/i^Exp_Health_Set^;
+
+!!FU(WriteIniInts):P(filePath)/^StackExperience^/
+  ^Exp_Att_Def_Set^/i^Exp_Att_Def_Set^/
+  ^Exp_Speed_Set^/i^Exp_Speed_Set^/
+  ^Exp_MinMax_Damage_Set^/i^Exp_MinMax_Damage_Set^;
+
+!!FU(SaveIni):P(filePath);
+
+
+*Load early so the selected tables are available before OnGameEnter applies
+*the stack-experience rebalance.
+!?PI;
+!!SN:W^Stack_Exp_Rebalance_Mod_Active^/1;
+!!FU(Stack_Exp_LoadOptionsFromIni):P;
+
+*Reload after a new map is initialized or a savegame has restored its named
+*variables. This gives the mod-owned Runtime INI final precedence.
+!?FU(OnStartOrLoad);
+!!SN:W^Stack_Exp_Rebalance_Mod_Active^/1;
+!!FU(Stack_Exp_LoadOptionsFromIni):P;
 
 
 
@@ -1292,162 +1420,3 @@ Min Max Damage Percentage Based
 !!SN:L^EraPlugins\erm_hooker.era^/?y1;  
 !!SN:Ay1/^SetHook^/?y2;                
 !!SN:Ey2/1/4462998/(Event_AfterMeeleDamage_Stack_Rebalance);
-
-
-
-****************************************************************************************************
-
-
-                                      Testing
-
-
-
-****************************************************************************************************
-
-!?FU(OnEveryDay)&i^timerOnce^=1/i^timerDay^=1;
-!!FU:E;
-
-!!MA:P278/160; Paladin
-!!MA:P269/120; Templar
-!!MA:P201/160; Champion
-!!MA:P223/140; Death Knight
-
-!!MA:P273/40; Werewolf
-!!MA:P194/50;
-
-!?HM-1;
-
-!!FU:E;
-
-!!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y1;
-
-!!VRy1&y1=0:S155;
-!!VRy1&y1=1:S291;
-!!FU(GetMaxMonsterId):P?y1;
-
-!!re i/0/y1:;
-    !!EAi:L1;                           [Sets Stack Exp to Ace after one fight]
-!!en:; 
-
-!!FU:E;
-
-*Summon First Level
-*!HE-1:C0/0/197/10; Castle
-*!HE-1:C0/1/192/10; Rampart
-*!HE-1:C0/2/255/10; Tower
-*!HE-1:C0/3/213/10; Inferno
-*!HE-1:C0/4/220/10; Nekropolis
-*!HE-1:C0/5/225/10; Dungeon
-*!HE-1:C0/6/232/10; Stronghold 
-*!HE-1:C0/5/239/10; Fortress
-*!HE-1:C0/6/246/10; Conflux 
-
-
-*Summon Second Level
-*!HE-1:C0/0/198/10; Castle
-*!HE-1:C0/1/203/10; Rampart
-*!HE-1:C0/2/208/10; Tower
-*!HE-1:C0/3/214/500; Inferno
-*!HE-1:C0/4/141/10; Nekropolis
-*!HE-1:C0/5/226/10; Dungeon
-*!HE-1:C0/6/233/10; Stronghold 
-*!HE-1:C0/5/240/10; Fortress
-*!HE-1:C0/6/247/10; Conflux 
-
-
-*Summon Third Level
-*!HE-1:C0/0/199/10; Castle
-*!HE-1:C0/1/204/10; Rampart
-*!HE-1:C0/2/256/10; Tower
-*!HE-1:C0/3/215/10; Inferno
-*!HE-1:C0/4/261/10; Nekropolis
-*!HE-1:C0/5/227/10; Dungeon
-*!HE-1:C0/6/234/10; Stronghold
-*!HE-1:C0/5/241/10; Fortress
-*!HE-1:C0/6/248/10; Conflux
-
-
-*Summon Fourth Level
-*!HE-1:C0/0/200/10; Castle
-*!HE-1:C0/1/204/10; Rampart
-*!HE-1:C0/2/257/10; Tower
-*!HE-1:C0/3/210/500; Inferno
-*!HE-1:C0/4/221/10; Nekropolis
-*!HE-1:C0/5/228/10; Dungeon
-*!HE-1:C0/6/235/10; Stronghold 
-*!HE-1:C0/5/242/100; Fortress
-*!HE-1:C0/6/249/10; Conflux 
-
-
-*Summon Fifth Level
-*!HE-1:C0/0/169/10; Castle
-*!HE-1:C0/1/205/10; Rampart
-*!HE-1:C0/2/210/10; Tower
-*!HE-1:C0/3/217/10; Inferno
-*!HE-1:C0/4/222/10; Nekropolis
-*!HE-1:C0/5/229/10; Dungeon
-*!HE-1:C0/6/236/10; Stronghold 
-*!HE-1:C0/5/244/10; Fortress
-*!HE-1:C0/6/250/10; Conflux 
-
-
-*Summon Sixth Level
-*!HE-1:C0/0/201/10; Castle
-*!HE-1:C0/1/206/10; Rampart
-*!HE-1:C0/2/211/10; Tower
-*!HE-1:C0/3/218/10; Inferno
-*!HE-1:C0/4/223/10; Nekropolis
-*!HE-1:C0/5/230/10; Dungeon
-*!HE-1:C0/6/237/10; Stronghold 
-*!HE-1:C0/5/243/100; Fortress
-*!HE-1:C0/6/251/100; Conflux 
-
-
-
-*Summon Seventh (3rd Upgrade WoG) Level
-*!HE-1:C0/0/150/10; Castle
-*!HE-1:C0/1/151/10; Rampart
-*!HE-1:C0/2/152/10; Tower
-*!HE-1:C0/3/153/500; Inferno
-*!HE-1:C0/4/154/10; Nekropolis
-*!HE-1:C0/5/155/10; Dungeon
-*!HE-1:C0/6/156/10; Stronghold 
-*!HE-1:C0/5/157/10; Fortress
-*!HE-1:C0/6/158/10; Conflux 
-
-
-*Summon Seventh (4th Upgrade) Level
-*!HE-1:C0/0/202/10; Castle
-*!HE-1:C0/1/207/10; Rampart
-*!HE-1:C0/2/212/10; Tower
-*!HE-1:C0/3/219/10; Inferno
-*!HE-1:C0/4/224/10; Nekropolis
-*!HE-1:C0/5/231/10; Dungeon
-*!HE-1:C0/6/238/10; Stronghold 
-*!HE-1:C0/5/245/10; Fortress
-*!HE-1:C0/6/252/10; Conflux 
-
-*!FU:E;
-*!HE-1:C0/0/247/1000; Castle
-*!HE-1:C0/1/248/1000; Rampart
-*!HE-1:C0/2/249/1000; Tower
-*!HE-1:C0/3/250/1000; Inferno
-*!HE-1:C0/3/214/10; Inferno
-
-
-****************************************************************************************************
-*!FU:E;
-*?HM-1;
-*!DO(AC_Function_541)/0/6/1:P-1;
-
-
-!?FU(AC_Function_541);
-!!HEx1:C0/x16/?y1/?y2;
-!!FU|y2<1/y1<0:E;
-!!IF:L^%Y1^;
-
-
-
-
-!?HM-1;
-!!EA214:B7/1/112/22/0/0/0/0/0/0/0/0/0/0/0; [Magogs Cast Inferno after attack 50% chance]
