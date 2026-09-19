@@ -1,15 +1,24 @@
 {
+  "caption": {
+    "en_US": "Stack Experience Rebalance"
+  },
   "name": {
     "en": "Stack Experience Rebalance",
     "ru": "Баланс опыта отрядов"
   },
   "description": {
+    "full": {
+      "en_US": "readme.txt"
+    },
     "en": "readme.txt"
   },
   "author": "PerryR",
   "homepage": "https://github.com/PerryR-1971/Stack-Experience-Rebalance",
   "support": "https://discord.gg/hCTMfVq6w5",
-  "icon": "stackexp.ico",
+  "icon": {
+    "file": "stackexp.ico"
+  },
+  "mod_version": "0.9",
   "version": "0.9",
   "category": "gameplay",
   "compatibility": {
